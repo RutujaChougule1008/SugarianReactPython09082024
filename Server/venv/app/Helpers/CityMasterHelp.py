@@ -1,18 +1,29 @@
 
-from flask import jsonify
+import os
+from flask import jsonify, request
 from app import app, db
 from sqlalchemy.exc import SQLAlchemyError 
 from sqlalchemy import text
 
+API_URL = os.getenv('API_URL')
 
-@app.route('/group_city_master', methods=['GET'])
+
+@app.route(API_URL+'/group_city_master', methods=['GET'])
 def group_city_master():
     try:
+        Company_Code = request.args.get('Company_Code')
+        if Company_Code is None:
+            return jsonify({'error': 'Missing Company_Code parameter'}), 400
+
+        try:
+            Company_Code = int(Company_Code)
+        except ValueError:
+            return jsonify({'error': 'Invalid Company_Code parameter'}), 400
         # Start a database transaction
         with db.session.begin_nested():
             query = db.session.execute(text('''
-               select city_code,city_name_e,city_name_r,state,cityid from nt_1_citymaster where company_code=1 order by city_name_e
-            '''))
+               select city_code,city_name_e,city_name_r,state,cityid from nt_1_citymaster WHERE Company_Code=:company_code order by city_name_e
+            '''),{'company_code': Company_Code})
 
             result = query.fetchall()
 

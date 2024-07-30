@@ -38,7 +38,8 @@ function OtherPurchaseUtility() {
             try {
                 const apiUrl = `http://localhost:8080/api/sugarian/getall-OtherPurchase?Company_Code=${companyCode}&Year_Code=${Year_Code}`;
                 const response = await axios.get(apiUrl);
-                setFetchedData(response.data);
+                setFetchedData(response.data.all_other_purchase_data);
+                console.log(response.data)
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -50,10 +51,10 @@ function OtherPurchaseUtility() {
     useEffect(() => {
         const filtered = fetchedData.filter(post => {
             const searchTermLower = searchTerm.toLowerCase();
-            const groupNolower = String(post.Company_Code)
-            const tenderDateLower = (post.Narration || '').toLowerCase();
+            const groupNolower = String(post.other_purchase_data.Company_Code)
+            const tenderDateLower = (post.other_purchase_data.Narration || '').toLowerCase();
             return (
-                (filterValue === "" || post.group_Type === filterValue) &&
+                (filterValue === "" || post.other_purchase_data.group_Type === filterValue) &&
                 (groupNolower.includes(searchTermLower) ||
                     tenderDateLower.includes(searchTermLower)
                 )
@@ -86,7 +87,7 @@ function OtherPurchaseUtility() {
     };
 
     const handleRowClick = (Doc_No) => {
-        const selectedRecord = filteredData.find(record => record.Doc_No === Doc_No);
+        const selectedRecord = filteredData.find(record => record.other_purchase_data.Doc_No === Doc_No);
         console.log("selectedRecord", selectedRecord)
         navigate("/other-purchase", { state: { selectedRecord } });
     };
@@ -143,13 +144,13 @@ function OtherPurchaseUtility() {
                                             key={post.Doc_No}
                                             className="row-item"
                                             style={{ cursor: "pointer" }}
-                                            onDoubleClick={() => handleRowClick(post.Doc_No)}
+                                            onDoubleClick={() => handleRowClick(post.other_purchase_data.Doc_No)}
                                         >
-                                            <TableCell>{post.Doc_No}</TableCell>
-                                            <TableCell>{post.Doc_Date}</TableCell>
-                                            <TableCell>{post.Suppliername}</TableCell>
-                                            <TableCell>{post.Bill_Amount}</TableCell>
-                                            <TableCell>{post.Narration}</TableCell>
+                                            <TableCell>{post.other_purchase_data.Doc_No}</TableCell>
+                                            <TableCell>{post.other_purchase_data.Doc_Date}</TableCell>
+                                            <TableCell>{post.labels.SupplierName}</TableCell>
+                                            <TableCell>{post.other_purchase_data.Bill_Amount}</TableCell>
+                                            <TableCell>{post.other_purchase_data.Narration}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

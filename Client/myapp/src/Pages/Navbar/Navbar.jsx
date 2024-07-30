@@ -128,7 +128,7 @@ const Navbar = () => {
               {activeSubMenu === "accountInfo" && (
                 <div className="submenu1">
                   <div className="submenu-item1">
-                    <a href="/account-master">Account Master</a>
+                    <a href="/AccountMaster-utility">Account Master</a>
                   </div>
                   <div className="submenu-item1">
                     <a href="/customer-limits">Customer Limits</a>
@@ -140,7 +140,7 @@ const Navbar = () => {
                     <a href="/city-master-utility">City Master</a>
                   </div>
                   <div className="submenu-item1">
-                    <a href="/corporate-customer-limit">
+                    <a href="/PartyUnitMaster-utility">
                       Corporate Customer Unit/Godown Declaration
                     </a>
                   </div>
@@ -273,7 +273,7 @@ const Navbar = () => {
               <a href="/general-transaction">General Transaction</a>
             </div>
             <div className="submenu-item">
-              <a href="/payment-note">Payment Note</a>
+              <a href="/PaymentNote-utility">Payment Note</a>
             </div>
           </div>
         )}

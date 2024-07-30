@@ -1,0 +1,200 @@
+.ac-master-form-container {
+    max-width: 100%;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #76D7C4 ;
+}
+.SaleBill-col-Text{
+    flex: 0 0 auto;
+    padding: 0px;
+    margin-left: 10px;
+    width: 130px;
+}
+
+.ac-master-col-Ewaybillno{
+    flex: 0 0 auto;
+    padding: 0px;
+    margin-left: 10px;
+    width: 200px;
+}
+
+.SaleBill-form-group-type{
+    flex: 0 0 auto;
+    padding: 0px;
+    margin-left: 10px;
+    width: 250px;
+}
+
+
+.SaleBill-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: -10px;
+    align-items: flex-start;
+    
+}
+
+.SaleBill-col {
+    flex: 0 0 auto;
+    padding: 0px;
+    margin-left: 10px;
+}
+
+.ac-master-form-group {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.ac-master-form-label {
+    margin-bottom: .5rem;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.SaleBill-custom-select, .ac-master-form-control {
+    display: block;
+    width: 100%;
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.ac-master-form-control[disabled], .ac-master-form-control[readonly] {
+    background-color: #e9ecef;
+    opacity: 1;
+}
+
+.ac-master-form-container textarea {
+    width: 30%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+ 
+  }
+
+
+  #IsmillName{
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    color: blue;
+    font-weight: bold;
+  }
+
+  .eTenderButton {
+    margin-right: 20px;
+}
+
+
+
+
+  /* styles.css */
+
+
+
+.modal-body {
+    padding: 20px;
+    background-color: #f9f9f9; /* Light background for better readability */
+    border-radius: 8px;
+    display: flex;
+  }
+  
+  .modal-body form {
+    display: flex;
+    flex-direction: column;
+    margin-left: 110px;
+  }
+
+  .modal-body form textarea{
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  
+  .modal-body label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    margin-top: 5px; /* Space between the previous input and the next label */
+  }
+  
+  .modal-body .form-element {
+    margin-bottom: 15px;
+  }
+  
+  .account-master-help {
+    margin-top: 5px;
+  }
+
+  .modal-title{
+    white-space: nowrap;
+  }
+  
+
+
+
+
+/* LoadingOverlay.css */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Ensure it's on top of other content */
+}
+
+.spinner-container {
+  text-align: center;
+}
+
+.Heading{
+  margin-bottom: -30px;
+}
+
+#Grid
+.ac-master-form-group {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .custom-table {
+    width: 30%;
+    border-collapse: collapse;
+    margin: 0;
+  }
+  
+  .custom-table th, .custom-table td {
+    padding: 4px;
+    text-align: left;
+    border: 1px solid #ddd;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  
+  .custom-table th {
+    background-color: #f2f2f2;
+  }
+  
+  .custom-table tbody tr td input[type="checkbox"] {
+    margin: 0;
+    padding: 0;
+    width: 16px; 
+    height: 16px;
+  }
+  

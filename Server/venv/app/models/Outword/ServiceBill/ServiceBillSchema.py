@@ -1,5 +1,5 @@
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from app.models.Outward.ServiceBill.ServiceBillModel import ServiceBillHead, ServiceBillDetail
+from app.models.Outword.ServiceBill.ServiceBillModel import ServiceBillHead, ServiceBillDetail
 
 class ServiceBillHeadSchema(SQLAlchemyAutoSchema):
     class Meta:

@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request
 from app import app, db
 from app.models.BusinessReleted.TenderPurchase.TenderPurchaseModels import TenderHead, TenderDetails 
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError 
 import os
 API_URL = os.getenv('API_URL')
@@ -513,4 +513,43 @@ def get_next_task_navigation():
         }
         return jsonify(response), 200
     except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    
+
+# Add detail entry to a particular tender by Tender_No
+@app.route(API_URL + "/add_tender_detail", methods=["POST"])
+def add_detail_to_tender():
+    try:
+        data = request.get_json()
+        detail_data = data.get('detailData')
+        tender_no = detail_data.get('Tender_No')
+
+        if not tender_no or not detail_data:
+            return jsonify({"error": "Missing Tender_No or detailData parameter"}), 400
+
+        tender_head = TenderHead.query.filter_by(Tender_No=tender_no).first()
+        if not tender_head:
+            return jsonify({"error": "Tender not found"}), 404
+
+        tenderid = tender_head.tenderid
+
+        # Generate new ID for the detail entry
+        max_detail_id = db.session.query(func.max(TenderDetails.ID)).filter_by(tenderid=tenderid).scalar() or 0
+        new_detail_id = max_detail_id + 1
+
+        detail_data['ID'] = new_detail_id
+        detail_data['Tender_No'] = tender_no
+        detail_data['tenderid'] = tenderid
+
+        new_detail = TenderDetails(**detail_data)
+        db.session.add(new_detail)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Detail entry added successfully",
+            "detail": tender_detail_schema.dump(new_detail)
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500

@@ -654,7 +654,7 @@ def get_firstdebitcredit_navigation():
         if not tran_type:
             return jsonify({"error": "Transaction type is required"}), 400
         # Use SQLAlchemy to get the first record from the Task table
-        first_task = DebitCreditNoteHead.query.filter_by(tran_type=tran_type,Company_Code=company_code,Year_Code=year_code).order_by(DebitCreditNoteHead.dcid.asc()).first()
+        first_task = DebitCreditNoteHead.query.filter_by(tran_type=tran_type,Company_Code=company_code,Year_Code=year_code).order_by(DebitCreditNoteHead.doc_no.asc()).first()
 
         if not first_task:
             return jsonify({"error": "No records found in Task_Entry table"}), 404

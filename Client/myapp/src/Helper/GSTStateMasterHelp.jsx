@@ -7,7 +7,7 @@ import "../App.css";
 
 var lActiveInputFeild = "";
 
-const GSTStateMasterHelp = ({ onAcCodeClick, name, newMillCode, CategoryName,GstStateCode }) => {
+const GSTStateMasterHelp = ({ onAcCodeClick, name, newMillCode, GstStateName,GstStateCode, disabledFeild,tabIndexHelp }) => {
 
     const [showModal, setShowModal] = useState(false);
     const [popupContent, setPopupContent] = useState([]);
@@ -167,7 +167,7 @@ const GSTStateMasterHelp = ({ onAcCodeClick, name, newMillCode, CategoryName,Gst
             <div className="d-flex ">
                 <div className="d-flex">
                     <input
-                        tabIndex="5"
+                        
                         type="text"
                         className="form-control ms-2"
                         id={name}
@@ -175,6 +175,8 @@ const GSTStateMasterHelp = ({ onAcCodeClick, name, newMillCode, CategoryName,Gst
                         value={enteredAcCode !== '' ? enteredAcCode : GstStateCode}
                         onChange={handleAcCodeChange}
                         style={{ width: "150px", height: "35px" }}
+                        tabIndex={tabIndexHelp}
+                        disabled={disabledFeild}
                       
 
                     />
@@ -184,12 +186,13 @@ const GSTStateMasterHelp = ({ onAcCodeClick, name, newMillCode, CategoryName,Gst
                         onClick={handleMillCodeButtonClick}
                         className="ms-1"
                         style={{ width: "30px", height: "35px" }}
+                        disabled={disabledFeild}
                       
                     >
                         ...
                     </Button>
                     <label id="acNameLabel" className=" form-labels ms-2">
-                        {enteredAcName || CategoryName}
+                        {enteredAcName || GstStateName}
                     </label>
                 </div>
             </div>

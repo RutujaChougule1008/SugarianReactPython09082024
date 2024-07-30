@@ -1,5 +1,5 @@
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from app.models.Outward.SugarSaleReturnSale.SugarSaleReturnSaleModel import SugarSaleReturnSaleHead, SugarSaleReturnSaleDetail
+from app.models.Outword.SugarSaleReturnSale.SugarSaleReturnSaleModel import SugarSaleReturnSaleHead, SugarSaleReturnSaleDetail
 
 class SugarSaleReturnSaleHeadSchema(SQLAlchemyAutoSchema):
     class Meta:

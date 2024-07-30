@@ -1,35 +1,38 @@
 from flask import Flask, jsonify, request
 from app import app, db
+import requests
+from app.models.Transactions.ReceiptPayment.ReceiptPaymentModels import ReceiptPaymentHead, ReceiptPaymentDetail
+from app.models.Transactions.ReceiptPayment.ReceiptPaymentSchema import ReceiptPaymentHeadSchema, ReceiptPaymentDetailSchema
+from app.utils.CommonGLedgerFunctions import fetch_company_parameters, get_accoid, getSaleAc, get_acShort_Name
 from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 import os
 
-from app.models.Transactions.ReceiptPayment.ReceiptPaymentModels import ReceiptPaymentHead, ReceiptPaymentDetail
-import requests
-from app.utils.CommonGLedgerFunctions import get_accoid
-
 API_URL = os.getenv('API_URL')
 
-from app.models.Transactions.ReceiptPayment.ReceiptPaymentSchema import ReceiptPaymentHeadSchema, ReceiptPaymentDetailSchema
-
 RECEIPT_PAYMENT_DETAILS_QUERY = '''
-SELECT        dbo.nt_1_transactdetail.Tran_Type, dbo.nt_1_transactdetail.doc_no, dbo.nt_1_transactdetail.doc_date, dbo.nt_1_transactdetail.detail_id, dbo.nt_1_transactdetail.debit_ac, dbo.nt_1_transactdetail.credit_ac, 
-                         dbo.nt_1_transactdetail.Unit_Code, dbo.nt_1_transactdetail.amount, dbo.nt_1_transactdetail.narration, dbo.nt_1_transactdetail.narration2, dbo.nt_1_transactdetail.Voucher_No, dbo.nt_1_transactdetail.Voucher_Type, 
-                         dbo.nt_1_transactdetail.Adjusted_Amount, dbo.nt_1_transactdetail.Tender_No, dbo.nt_1_transactdetail.TenderDetail_ID, dbo.nt_1_transactdetail.drpFilterValue, dbo.nt_1_transactdetail.CreditAcAdjustedAmount, 
-                         dbo.nt_1_transactdetail.Branch_name, dbo.nt_1_transactdetail.YearCodeDetail, dbo.nt_1_transactdetail.tranid, dbo.nt_1_transactdetail.ca, dbo.nt_1_transactdetail.uc, dbo.nt_1_transactdetail.tenderdetailid, 
-                         dbo.nt_1_transactdetail.sbid, dbo.nt_1_transactdetail.da, dbo.nt_1_transactdetail.trandetailid, dbo.nt_1_transactdetail.drcr, dbo.nt_1_transactdetail.AcadjAccode, dbo.nt_1_transactdetail.AcadjAmt, dbo.nt_1_transactdetail.ac, 
-                         dbo.nt_1_transactdetail.TDS_Rate, dbo.nt_1_transactdetail.TDS_Amt, dbo.nt_1_transactdetail.GRN, dbo.nt_1_transactdetail.TReceipt, dbo.nt_1_transacthead.company_code, dbo.nt_1_transacthead.year_code, 
-                         dbo.nt_1_transacthead.cashbank, dbo.nt_1_transacthead.cb, cashbank.Ac_Code AS cashbankaccode, cashbank.Ac_Name_E AS cashbankname, cashbank.accoid AS cashbankacid, debitac.Ac_Code AS debitaccode, 
-                         debitac.Ac_Name_E AS debitacname, creditac.Ac_Code AS creditaccode, creditac.Ac_Name_E AS creditacname, creditac.accoid AS creditacid, debitac.accoid AS debitacid, unit.Ac_Code AS unitaccode, 
-                         unit.Ac_Name_E AS unitacname, unit.accoid AS unitacid, adjustedac.Ac_Code AS adjustedaccode, adjustedac.Ac_Name_E AS adjustedacname, adjustedac.accoid AS adjustedacid
-FROM            dbo.nt_1_accountmaster AS creditac RIGHT OUTER JOIN
-                         dbo.nt_1_accountmaster AS unit RIGHT OUTER JOIN
-                         dbo.nt_1_accountmaster AS adjustedac RIGHT OUTER JOIN
-                         dbo.nt_1_transactdetail ON adjustedac.accoid = dbo.nt_1_transactdetail.ac ON unit.accoid = dbo.nt_1_transactdetail.uc ON creditac.accoid = dbo.nt_1_transactdetail.ca LEFT OUTER JOIN
-                         dbo.nt_1_accountmaster AS debitac ON dbo.nt_1_transactdetail.da = debitac.accoid RIGHT OUTER JOIN
-                         dbo.nt_1_transacthead LEFT OUTER JOIN
-                         dbo.nt_1_accountmaster AS cashbank ON dbo.nt_1_transacthead.cb = cashbank.accoid ON dbo.nt_1_transactdetail.tranid = dbo.nt_1_transacthead.tranid
-WHERE dbo.nt_1_transacthead.tranid = :tranid
+SELECT         
+    cashbank.Ac_Name_E AS cashbankname,  
+    debitac.Ac_Name_E AS debitacname,  
+    creditac.Ac_Name_E AS creditacname, 
+    unit.Ac_Name_E AS unitacname,  
+    adjustedac.Ac_Name_E AS adjustedacname
+FROM
+    dbo.nt_1_accountmaster AS creditac 
+    RIGHT OUTER JOIN dbo.nt_1_accountmaster AS unit 
+    RIGHT OUTER JOIN dbo.nt_1_accountmaster AS adjustedac 
+    RIGHT OUTER JOIN dbo.nt_1_transactdetail 
+    ON adjustedac.accoid = dbo.nt_1_transactdetail.ac 
+    ON unit.accoid = dbo.nt_1_transactdetail.uc 
+    ON creditac.accoid = dbo.nt_1_transactdetail.ca 
+    LEFT OUTER JOIN dbo.nt_1_accountmaster AS debitac 
+    ON dbo.nt_1_transactdetail.da = debitac.accoid 
+    RIGHT OUTER JOIN dbo.nt_1_transacthead 
+    LEFT OUTER JOIN dbo.nt_1_accountmaster AS cashbank 
+    ON dbo.nt_1_transacthead.cb = cashbank.accoid 
+    ON dbo.nt_1_transactdetail.tranid = dbo.nt_1_transacthead.tranid
+WHERE 
+    dbo.nt_1_transacthead.tranid = :tranid
 '''
 
 receipt_payment_head_schema = ReceiptPaymentHeadSchema()
@@ -47,17 +50,48 @@ def format_dates(task):
 @app.route(API_URL + "/getdata-receiptpayment", methods=["GET"])
 def getdata_receiptpayment():
     try:
-        head_data = ReceiptPaymentHead.query.all()
-        detail_data = ReceiptPaymentDetail.query.all()
-        # Serialize the data using schemas
-        head_result = receipt_payment_head_schemas.dump(head_data)
-        detail_result = receipt_payment_detail_schemas.dump(detail_data)
-        response = {
-            "ReceiptPayment_Head": head_result,
-            "ReceiptPayment_Detail": detail_result
-        }
+        Company_Code = request.args.get('Company_Code')
+        Year_Code = request.args.get('Year_Code')
+        tran_type = request.args.get('tran_type')
+        if not all([Company_Code, Year_Code, tran_type]):
+            return jsonify({"error": "Missing required parameters"}), 400
 
+        records = ReceiptPaymentHead.query.filter_by(company_code=Company_Code, year_code=Year_Code,tran_type = tran_type).all()
+
+        if not records:
+            return jsonify({"error": "No records found"}), 404
+
+        all_records_data = []
+
+        for record in records:
+            receipt_payment_head_data = {column.name: getattr(record, column.name) for column in record.__table__.columns}
+            receipt_payment_head_data.update(format_dates(record))
+
+            tranid = record.tranid
+            additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
+            additional_data_rows = additional_data.fetchall()
+
+            labels = [dict(row._mapping) for row in additional_data_rows]
+
+            
+            detail_data = [{
+                **{column.name: getattr(detail, column.name) for column in detail.__table__.columns},
+                **format_dates(detail)
+            } for detail in ReceiptPaymentDetail.query.filter_by(tranid=tranid).all()]
+
+            record_response = {
+                "receipt_payment_head_data": receipt_payment_head_data,
+                "labels": labels,
+                "receipt_payment_details": detail_data
+            }
+
+            all_records_data.append(record_response)
+
+        response = {
+            "all_data_receiptpayment": all_records_data
+        }
         return jsonify(response), 200
+
     except Exception as e:
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
@@ -65,15 +99,14 @@ def getdata_receiptpayment():
 @app.route(API_URL + "/getreceiptpaymentByid", methods=["GET"])
 def getreceiptpaymentByid():
     try:
-        # Extract doc_no from request query parameters
-        doc_no = request.args.get('doc_no')
         Company_Code = request.args.get('Company_Code')
+        doc_no = request.args.get('doc_no')
         Year_Code = request.args.get('Year_Code')
         tran_type = request.args.get('tran_type')
         if not all([Company_Code, Year_Code, tran_type, doc_no]):
             return jsonify({"error": "Missing required parameters"}), 400
 
-        receipt_payment_head = ReceiptPaymentHead.query.filter_by(doc_no=doc_no,company_code=Company_Code,year_code=Year_Code,tran_type=tran_type).first()
+        receipt_payment_head = ReceiptPaymentHead.query.filter_by(doc_no=doc_no, company_code=Company_Code, year_code=Year_Code, tran_type=tran_type).first()
         if not receipt_payment_head:
             return jsonify({"error": "No records found"}), 404
 
@@ -81,32 +114,18 @@ def getreceiptpaymentByid():
         additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        cashbankname = row.cashbankname if row else None
-        debitacname = row.debitacname if row else None
-        creditacname = row.creditacname if row else None
-        unitacname = row.unitacname if row else None
-        adjustedacname = row.adjustedacname if row else None
+        labels = [dict(row._mapping) for row in additional_data_rows]
 
         response = {
             "receipt_payment_head": {
                 **{column.name: getattr(receipt_payment_head, column.name) for column in receipt_payment_head.__table__.columns},
-                **format_dates(receipt_payment_head),
-                "cashbankname":cashbankname,
-                "debitacname":debitacname,
-                "creditacname":creditacname,
-                "unitacname":unitacname,
-                "adjustedacname":adjustedacname
-
+                **format_dates(receipt_payment_head)
             },
-            "receipt_payment_details": [{"Tran_Type": row.Tran_Type, "doc_no": row.doc_no, "doc_date": row.doc_date.strftime('%Y-%m-%d') if row.doc_date else None, "detail_id": row.detail_id, "debit_ac": row.debit_ac, "credit_ac": row.credit_ac, "amount": row.amount, "narration": row.narration,
-                                         "Adjusted_Amount":row.Adjusted_Amount,"Tender_No":row.Tender_No,"TenderDetail_ID":row.TenderDetail_ID,
-                                         "drpFilterValue":row.drpFilterValue,"CreditAcAdjustedAmount":row.CreditAcAdjustedAmount,
-                                         "Branch_name":row.Branch_name,"YearCodeDetail":row.YearCodeDetail,"ca":row.ca,"uc":row.uc,
-                                         "tenderdetailid":row.tenderdetailid,"sbid":row.sbid,"da":row.da,"trandetailid":row.trandetailid,
-                                         "drcr":row.drcr,"AcadjAccode":row.AcadjAccode,"AcadjAmt":row.AcadjAmt,"ac":row.ac,"TDS_Rate":row.TDS_Rate,
-                                         "TDS_Amt":row.TDS_Amt,"GRN":row.GRN,"TReceipt":row.TReceipt} for row in additional_data_rows],
-                                         
+            "labels": labels,
+            "receipt_payment_details": [{
+                **{column.name: getattr(detail, column.name) for column in detail.__table__.columns},
+                **format_dates(detail)
+            } for detail in ReceiptPaymentDetail.query.filter_by(tranid=tranid).all()]
         }
 
         return jsonify(response), 200
@@ -418,101 +437,40 @@ def delete_data_by_tranid():
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
-# Fetch the last record from the database by tranid
-@app.route(API_URL + "/get-lastreceiptpaymentdata", methods=["GET"])
-def get_lastreceiptpaymentdata():
-    try:
-        Company_Code = request.args.get('Company_Code')
-        Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code]):
-            return jsonify({"error": "Missing required parameters"}), 400
-
-        last_receipt_payment_head = ReceiptPaymentHead.query.filter_by(company_code=Company_Code,year_code=Year_Code).order_by(ReceiptPaymentHead.tranid.desc()).first()
-        if not last_receipt_payment_head:
-            return jsonify({"error": "No records found in ReceiptPaymentHead table"}), 404
-
-        tranid = last_receipt_payment_head.tranid
-        additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
-        additional_data_rows = additional_data.fetchall()
-
-        row = additional_data_rows[0] if additional_data_rows else None
-        cashbankname = row.cashbankname if row else None
-        debitacname = row.debitacname if row else None
-        creditacname = row.creditacname if row else None
-        unitacname = row.unitacname if row else None
-        adjustedacname = row.adjustedacname if row else None
-
-        last_head_data = {
-            **{column.name: getattr(last_receipt_payment_head, column.name) for column in last_receipt_payment_head.__table__.columns},
-            **format_dates(last_receipt_payment_head),
-            "cashbankname":cashbankname,
-            "debitacname":debitacname,
-            "creditacname":creditacname,
-            "unitacname":unitacname,
-            "adjustedacname":adjustedacname
-        }
-
-        last_details_data = [{"Tran_Type": row.Tran_Type, "doc_no": row.doc_no, "doc_date": row.doc_date.strftime('%Y-%m-%d') if row.doc_date else None, "detail_id": row.detail_id, "debit_ac": row.debit_ac, "credit_ac": row.credit_ac, "amount": row.amount, "narration": row.narration,
-                                         "Adjusted_Amount":row.Adjusted_Amount,"Tender_No":row.Tender_No,"TenderDetail_ID":row.TenderDetail_ID,
-                                         "drpFilterValue":row.drpFilterValue,"CreditAcAdjustedAmount":row.CreditAcAdjustedAmount,
-                                         "Branch_name":row.Branch_name,"YearCodeDetail":row.YearCodeDetail,"ca":row.ca,"uc":row.uc,
-                                         "tenderdetailid":row.tenderdetailid,"sbid":row.sbid,"da":row.da,"trandetailid":row.trandetailid,
-                                         "drcr":row.drcr,"AcadjAccode":row.AcadjAccode,"AcadjAmt":row.AcadjAmt,"ac":row.ac,"TDS_Rate":row.TDS_Rate,
-                                         "TDS_Amt":row.TDS_Amt,"GRN":row.GRN,"TReceipt":row.TReceipt} for row in additional_data_rows]
-
-        response = {
-            "last_head_data": last_head_data,
-            "last_details_data": last_details_data
-        }
-
-        return jsonify(response), 200
-    except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
-
-# Get first record from the database
 @app.route(API_URL + "/get-firstreceiptpayment-navigation", methods=["GET"])
 def get_firstreceiptpayment_navigation():
     try:
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code]):
+        tran_type = request.args.get('tran_type')
+        if not all([Company_Code, Year_Code, tran_type]):
             return jsonify({"error": "Missing required parameters"}), 400
-        
-        first_receipt_payment_head = ReceiptPaymentHead.query.filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ReceiptPaymentHead.tranid.asc()).first()
+
+        first_receipt_payment_head = ReceiptPaymentHead.query.filter_by(company_code=Company_Code, year_code=Year_Code, tran_type=tran_type).order_by(ReceiptPaymentHead.doc_no.asc()).first()
         if not first_receipt_payment_head:
-            return jsonify({"error": "No records found in ReceiptPaymentHead table"}), 404
+            return jsonify({"error": "No records found"}), 404
 
         tranid = first_receipt_payment_head.tranid
         additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        cashbankname = row.cashbankname if row else None
-        debitacname = row.debitacname if row else None
-        creditacname = row.creditacname if row else None
-        unitacname = row.unitacname if row else None
-        adjustedacname = row.adjustedacname if row else None
+        labels = [dict(row._mapping) for row in additional_data_rows]
 
         first_head_data = {
             **{column.name: getattr(first_receipt_payment_head, column.name) for column in first_receipt_payment_head.__table__.columns},
-            **format_dates(first_receipt_payment_head),
-            "cashbankname":cashbankname,
-            "debitacname":debitacname,
-            "creditacname":creditacname,
-            "unitacname":unitacname,
-            "adjustedacname":adjustedacname
+            **format_dates(first_receipt_payment_head)
         }
 
-        first_details_data = [{"Tran_Type": row.Tran_Type, "doc_no": row.doc_no, "doc_date": row.doc_date.strftime('%Y-%m-%d') if row.doc_date else None, "detail_id": row.detail_id, "debit_ac": row.debit_ac, "credit_ac": row.credit_ac, "amount": row.amount, "narration": row.narration,
-                                         "Adjusted_Amount":row.Adjusted_Amount,"Tender_No":row.Tender_No,"TenderDetail_ID":row.TenderDetail_ID,
-                                         "drpFilterValue":row.drpFilterValue,"CreditAcAdjustedAmount":row.CreditAcAdjustedAmount,
-                                         "Branch_name":row.Branch_name,"YearCodeDetail":row.YearCodeDetail,"ca":row.ca,"uc":row.uc,
-                                         "tenderdetailid":row.tenderdetailid,"sbid":row.sbid,"da":row.da,"trandetailid":row.trandetailid,
-                                         "drcr":row.drcr,"AcadjAccode":row.AcadjAccode,"AcadjAmt":row.AcadjAmt,"ac":row.ac,"TDS_Rate":row.TDS_Rate,
-                                         "TDS_Amt":row.TDS_Amt,"GRN":row.GRN,"TReceipt":row.TReceipt} for row in additional_data_rows]
+        first_details_data = [
+            {
+                **{column.name: getattr(detail, column.name) for column in detail.__table__.columns},
+                **format_dates(detail)
+            } for detail in ReceiptPaymentDetail.query.filter_by(tranid=tranid).all()
+        ]
 
         response = {
             "first_head_data": first_head_data,
+            "labels": labels,
             "first_details_data": first_details_data
         }
 
@@ -527,44 +485,35 @@ def get_lastreceiptpayment_navigation():
     try:
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code]):
+        tran_type = request.args.get('tran_type')
+        if not all([Company_Code, Year_Code, tran_type]):
             return jsonify({"error": "Missing required parameters"}), 400
-        
-        last_receipt_payment_head = ReceiptPaymentHead.query.filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ReceiptPaymentHead.tranid.desc()).first()
+
+        last_receipt_payment_head = ReceiptPaymentHead.query.filter_by(company_code=Company_Code, year_code=Year_Code, tran_type=tran_type).order_by(ReceiptPaymentHead.doc_no.desc()).first()
         if not last_receipt_payment_head:
-            return jsonify({"error": "No records found in ReceiptPaymentHead table"}), 404
+            return jsonify({"error": "No records found"}), 404
 
         tranid = last_receipt_payment_head.tranid
         additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        cashbankname = row.cashbankname if row else None
-        debitacname = row.debitacname if row else None
-        creditacname = row.creditacname if row else None
-        unitacname = row.unitacname if row else None
-        adjustedacname = row.adjustedacname if row else None
+        labels = [dict(row._mapping) for row in additional_data_rows]
 
         last_head_data = {
             **{column.name: getattr(last_receipt_payment_head, column.name) for column in last_receipt_payment_head.__table__.columns},
-            **format_dates(last_receipt_payment_head),
-            "cashbankname":cashbankname,
-            "debitacname":debitacname,
-            "creditacname":creditacname,
-            "unitacname":unitacname,
-            "adjustedacname":adjustedacname
+            **format_dates(last_receipt_payment_head)
         }
 
-        last_details_data = [{"Tran_Type": row.Tran_Type, "doc_no": row.doc_no, "doc_date": row.doc_date.strftime('%Y-%m-%d') if row.doc_date else None, "detail_id": row.detail_id, "debit_ac": row.debit_ac, "credit_ac": row.credit_ac, "amount": row.amount, "narration": row.narration,
-                                         "Adjusted_Amount":row.Adjusted_Amount,"Tender_No":row.Tender_No,"TenderDetail_ID":row.TenderDetail_ID,
-                                         "drpFilterValue":row.drpFilterValue,"CreditAcAdjustedAmount":row.CreditAcAdjustedAmount,
-                                         "Branch_name":row.Branch_name,"YearCodeDetail":row.YearCodeDetail,"ca":row.ca,"uc":row.uc,
-                                         "tenderdetailid":row.tenderdetailid,"sbid":row.sbid,"da":row.da,"trandetailid":row.trandetailid,
-                                         "drcr":row.drcr,"AcadjAccode":row.AcadjAccode,"AcadjAmt":row.AcadjAmt,"ac":row.ac,"TDS_Rate":row.TDS_Rate,
-                                         "TDS_Amt":row.TDS_Amt,"GRN":row.GRN,"TReceipt":row.TReceipt} for row in additional_data_rows]
+        last_details_data = [
+            {
+                **{column.name: getattr(detail, column.name) for column in detail.__table__.columns},
+                **format_dates(detail)
+            } for detail in ReceiptPaymentDetail.query.filter_by(tranid=tranid).all()
+        ]
 
         response = {
             "last_head_data": last_head_data,
+            "labels": labels,
             "last_details_data": last_details_data
         }
 
@@ -580,10 +529,11 @@ def get_previousreceiptpayment_navigation():
         current_doc_no = request.args.get('currentDocNo')
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code,current_doc_no]):
+        tran_type = request.args.get('tran_type')
+        if not all([Company_Code, Year_Code, current_doc_no, tran_type]):
             return jsonify({"error": "Missing required parameters"}), 400
 
-        previous_receipt_payment_head = ReceiptPaymentHead.query.filter(ReceiptPaymentHead.doc_no < current_doc_no).filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ReceiptPaymentHead.doc_no.desc()).first()
+        previous_receipt_payment_head = ReceiptPaymentHead.query.filter(ReceiptPaymentHead.doc_no < current_doc_no).filter_by(company_code=Company_Code, year_code=Year_Code, tran_type=tran_type).order_by(ReceiptPaymentHead.doc_no.desc()).first()
         if not previous_receipt_payment_head:
             return jsonify({"error": "No previous records found"}), 404
 
@@ -591,33 +541,23 @@ def get_previousreceiptpayment_navigation():
         additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        cashbankname = row.cashbankname if row else None
-        debitacname = row.debitacname if row else None
-        creditacname = row.creditacname if row else None
-        unitacname = row.unitacname if row else None
-        adjustedacname = row.adjustedacname if row else None
+        labels = [dict(row._mapping) for row in additional_data_rows]
 
         previous_head_data = {
             **{column.name: getattr(previous_receipt_payment_head, column.name) for column in previous_receipt_payment_head.__table__.columns},
-            **format_dates(previous_receipt_payment_head),
-            "cashbankname":cashbankname,
-            "debitacname":debitacname,
-            "creditacname":creditacname,
-            "unitacname":unitacname,
-            "adjustedacname":adjustedacname
+            **format_dates(previous_receipt_payment_head)
         }
 
-        previous_details_data = [{"Tran_Type": row.Tran_Type, "doc_no": row.doc_no, "doc_date": row.doc_date.strftime('%Y-%m-%d') if row.doc_date else None, "detail_id": row.detail_id, "debit_ac": row.debit_ac, "credit_ac": row.credit_ac, "amount": row.amount, "narration": row.narration,
-                                         "Adjusted_Amount":row.Adjusted_Amount,"Tender_No":row.Tender_No,"TenderDetail_ID":row.TenderDetail_ID,
-                                         "drpFilterValue":row.drpFilterValue,"CreditAcAdjustedAmount":row.CreditAcAdjustedAmount,
-                                         "Branch_name":row.Branch_name,"YearCodeDetail":row.YearCodeDetail,"ca":row.ca,"uc":row.uc,
-                                         "tenderdetailid":row.tenderdetailid,"sbid":row.sbid,"da":row.da,"trandetailid":row.trandetailid,
-                                         "drcr":row.drcr,"AcadjAccode":row.AcadjAccode,"AcadjAmt":row.AcadjAmt,"ac":row.ac,"TDS_Rate":row.TDS_Rate,
-                                         "TDS_Amt":row.TDS_Amt,"GRN":row.GRN,"TReceipt":row.TReceipt} for row in additional_data_rows]
+        previous_details_data = [
+            {
+                **{column.name: getattr(detail, column.name) for column in detail.__table__.columns},
+                **format_dates(detail)
+            } for detail in ReceiptPaymentDetail.query.filter_by(tranid=tranid).all()
+        ]
 
         response = {
             "previous_head_data": previous_head_data,
+            "labels": labels,
             "previous_details_data": previous_details_data
         }
 
@@ -631,13 +571,13 @@ def get_previousreceiptpayment_navigation():
 def get_nextreceiptpayment_navigation():
     try:
         current_doc_no = request.args.get('currentDocNo')
-        current_doc_no = request.args.get('currentDocNo')
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code,current_doc_no]):
+        tran_type = request.args.get('tran_type')
+        if not all([Company_Code, Year_Code, current_doc_no, tran_type]):
             return jsonify({"error": "Missing required parameters"}), 400
 
-        next_receipt_payment_head = ReceiptPaymentHead.query.filter(ReceiptPaymentHead.doc_no > current_doc_no).filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ReceiptPaymentHead.doc_no.asc()).first()
+        next_receipt_payment_head = ReceiptPaymentHead.query.filter(ReceiptPaymentHead.doc_no > current_doc_no).filter_by(company_code=Company_Code, year_code=Year_Code, tran_type=tran_type).order_by(ReceiptPaymentHead.doc_no.asc()).first()
         if not next_receipt_payment_head:
             return jsonify({"error": "No next records found"}), 404
 
@@ -645,33 +585,23 @@ def get_nextreceiptpayment_navigation():
         additional_data = db.session.execute(text(RECEIPT_PAYMENT_DETAILS_QUERY), {"tranid": tranid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        cashbankname = row.cashbankname if row else None
-        debitacname = row.debitacname if row else None
-        creditacname = row.creditacname if row else None
-        unitacname = row.unitacname if row else None
-        adjustedacname = row.adjustedacname if row else None
+        labels = [dict(row._mapping) for row in additional_data_rows]
 
         next_head_data = {
             **{column.name: getattr(next_receipt_payment_head, column.name) for column in next_receipt_payment_head.__table__.columns},
-            **format_dates(next_receipt_payment_head),
-            "cashbankname":cashbankname,
-            "debitacname":debitacname,
-            "creditacname":creditacname,
-            "unitacname":unitacname,
-            "adjustedacname":adjustedacname
+            **format_dates(next_receipt_payment_head)
         }
 
-        next_details_data = [{"Tran_Type": row.Tran_Type, "doc_no": row.doc_no, "doc_date": row.doc_date.strftime('%Y-%m-%d') if row.doc_date else None, "detail_id": row.detail_id, "debit_ac": row.debit_ac, "credit_ac": row.credit_ac, "amount": row.amount, "narration": row.narration,
-                                         "Adjusted_Amount":row.Adjusted_Amount,"Tender_No":row.Tender_No,"TenderDetail_ID":row.TenderDetail_ID,
-                                         "drpFilterValue":row.drpFilterValue,"CreditAcAdjustedAmount":row.CreditAcAdjustedAmount,
-                                         "Branch_name":row.Branch_name,"YearCodeDetail":row.YearCodeDetail,"ca":row.ca,"uc":row.uc,
-                                         "tenderdetailid":row.tenderdetailid,"sbid":row.sbid,"da":row.da,"trandetailid":row.trandetailid,
-                                         "drcr":row.drcr,"AcadjAccode":row.AcadjAccode,"AcadjAmt":row.AcadjAmt,"ac":row.ac,"TDS_Rate":row.TDS_Rate,
-                                         "TDS_Amt":row.TDS_Amt,"GRN":row.GRN,"TReceipt":row.TReceipt} for row in additional_data_rows]
+        next_details_data = [
+            {
+                **{column.name: getattr(detail, column.name) for column in detail.__table__.columns},
+                **format_dates(detail)
+            } for detail in ReceiptPaymentDetail.query.filter_by(tranid=tranid).all()
+        ]
 
         response = {
             "next_head_data": next_head_data,
+            "labels": labels,
             "next_details_data": next_details_data
         }
 

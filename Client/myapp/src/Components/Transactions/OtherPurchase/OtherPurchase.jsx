@@ -121,7 +121,7 @@ const OtherPurchase = () => {
 
   //Fetch last record
   const fetchLastRecord = () => {
-    fetch(`${API_URL}/get-OtherPurchase-lastRecord?Company_Code=${companyCode}&Year_Code=${Year_Code}`)
+    fetch(`${API_URL}/get-next-doc-no-OtherPurchase?Company_Code=${companyCode}&Year_Code=${Year_Code}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch last record");
@@ -131,7 +131,7 @@ const OtherPurchase = () => {
       .then((data) => {
         setFormData((prevState) => ({
           ...prevState,
-          Doc_No: data.last_OtherPurchase_data.Doc_No + 1,
+          Doc_No: data.next_doc_no,
         }));
       })
       .catch((error) => {
@@ -270,15 +270,15 @@ const OtherPurchase = () => {
       )
       .then((response) => {
         const data = response.data;
-        SupplierName = data.label_names[0].SupplierName;
+        SupplierName = data.labels.SupplierName;
         SupplierCode = data.last_OtherPurchase_data.Exp_Ac;
-        Exp_Ac_Name = data.label_names[0].ExpAcName;
+        Exp_Ac_Name = data.labels.ExpAcName;
         Exp_Ac_Code = data.last_OtherPurchase_data.Supplier_Code;
-        TDSCutAcName = data.label_names[0].TDSCutAcName;
+        TDSCutAcName = data.labels.TDSCutAcName;
         TDSCutAcCode = data.last_OtherPurchase_data.TDS_Cutt_AcCode;
-        TDSAcName = data.label_names[0].tdsacname;
+        TDSAcName = data.labels.tdsacname;
         TDSAcCodeNew = data.last_OtherPurchase_data.TDS_AcCode;
-        GStrateName = data.label_names[0].GST_Name;
+        GStrateName = data.labels.GST_Name;
         GStrateCode = data.last_OtherPurchase_data.GST_RateCode;
         setFormData({
           ...formData,
@@ -340,15 +340,15 @@ const OtherPurchase = () => {
         `${API_URL}/get-OtherPurchaseSelectedRecord?Company_Code=${companyCode}&Year_Code=${Year_Code}&Doc_No=${selectedRecord.Doc_No}`
       );
       const data = response.data;
-      SupplierName = data.label_names[0].SupplierName;
+      SupplierName = data.labels.SupplierName;
       SupplierCode = data.selected_Record_data.Supplier_Code;
-      Exp_Ac_Name = data.label_names[0].ExpAcName;
+      Exp_Ac_Name = data.labels.ExpAcName;
       Exp_Ac_Code = data.selected_Record_data.Exp_Ac;
-      TDSCutAcName = data.label_names[0].TDSCutAcName;
+      TDSCutAcName = data.labels.TDSCutAcName;
       TDSCutAcCode = data.selected_Record_data.TDS_Cutt_AcCode;
-      TDSAcName = data.label_names[0].tdsacname;
+      TDSAcName = data.labels.tdsacname;
       TDSAcCodeNew = data.selected_Record_data.TDS_AcCode;
-      GStrateName = data.label_names[0].GST_Name;
+      GStrateName = data.labels.GST_Name;
       GStrateCode = data.selected_Record_data.GST_RateCode;
       setFormData({
         ...formData,
@@ -386,15 +386,15 @@ const OtherPurchase = () => {
           `${API_URL}/get-OtherPurchaseSelectedRecord?Company_Code=${companyCode}&Year_Code=${Year_Code}&Doc_No=${changeNoValue}`
         );
         const data = response.data;
-        SupplierName = data.label_names[0].SupplierName;
+        SupplierName = data.labels.SupplierName;
         SupplierCode = data.selected_Record_data.Supplier_Code;
-        Exp_Ac_Name = data.label_names[0].ExpAcName;
+        Exp_Ac_Name = data.labels.ExpAcName;
         Exp_Ac_Code = data.selected_Record_data.Exp_Ac;
-        TDSCutAcName = data.label_names[0].TDSCutAcName;
+        TDSCutAcName = data.labels.TDSCutAcName;
         TDSCutAcCode = data.selected_Record_data.TDS_Cutt_AcCode;
-        TDSAcName = data.label_names[0].tdsacname;
+        TDSAcName = data.labels.tdsacname;
         TDSAcCodeNew = data.selected_Record_data.TDS_AcCode;
-        GStrateName = data.label_names[0].GST_Name;
+        GStrateName = data.labels.GST_Name;
         GStrateCode = data.selected_Record_data.GST_RateCode;
 
         setFormData({
@@ -414,15 +414,15 @@ const OtherPurchase = () => {
       const response = await fetch(`${API_URL}/get-first-OtherPurchase?Company_Code=${companyCode}&Year_Code=${Year_Code}`);
       if (response.ok) {
         const data = await response.json();
-        SupplierName = data.label_names[0].SupplierName;
+        SupplierName = data.labels.SupplierName;
         SupplierCode = data.first_OtherPurchase_data.Supplier_Code;
-        Exp_Ac_Name = data.label_names[0].ExpAcName;
+        Exp_Ac_Name = data.labels.ExpAcName;
         Exp_Ac_Code = data.first_OtherPurchase_data.Exp_Ac;
-        TDSCutAcName = data.label_names[0].TDSCutAcName;
+        TDSCutAcName = data.labels.TDSCutAcName;
         TDSCutAcCode = data.first_OtherPurchase_data.TDS_Cutt_AcCode;
-        TDSAcName = data.label_names[0].tdsacname;
+        TDSAcName = data.labels.tdsacname;
         TDSAcCodeNew = data.first_OtherPurchase_data.TDS_AcCode;
-        GStrateName = data.label_names[0].GST_Name;
+        GStrateName = data.labels.GST_Name;
         GStrateCode = data.first_OtherPurchase_data.GST_RateCode;
         setFormData({
           ...formData,
@@ -447,15 +447,15 @@ const OtherPurchase = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        SupplierName = data.label_names[0].SupplierName;
+        SupplierName = data.labels.SupplierName;
         SupplierCode = data.previous_OtherPurchase_data.Supplier_Code;
-        Exp_Ac_Name = data.label_names[0].ExpAcName;
+        Exp_Ac_Name = data.labels.ExpAcName;
         Exp_Ac_Code = data.previous_OtherPurchase_data.Exp_Ac;
-        TDSCutAcName = data.label_names[0].TDSCutAcName;
+        TDSCutAcName = data.labels.TDSCutAcName;
         TDSCutAcCode = data.previous_OtherPurchase_data.TDS_Cutt_AcCode;
-        TDSAcName = data.label_names[0].tdsacname;
+        TDSAcName = data.labels.tdsacname;
         TDSAcCodeNew = data.previous_OtherPurchase_data.TDS_AcCode;
-        GStrateName = data.label_names[0].GST_Name;
+        GStrateName = data.labels.GST_Name;
         GStrateCode = data.previous_OtherPurchase_data.GST_RateCode;
         setFormData({
           ...formData,
@@ -480,15 +480,15 @@ const OtherPurchase = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        SupplierName = data.label_names[0].SupplierName;
+        SupplierName = data.labels.SupplierName;
         SupplierCode = data.next_OtherPurchase_data.Supplier_Code;
-        Exp_Ac_Name = data.label_names[0].ExpAcName;
+        Exp_Ac_Name = data.labels.ExpAcName;
         Exp_Ac_Code = data.next_OtherPurchase_data.Exp_Ac;
-        TDSCutAcName = data.label_names[0].TDSCutAcName;
+        TDSCutAcName = data.labels.TDSCutAcName;
         TDSCutAcCode = data.next_OtherPurchase_data.TDS_Cutt_AcCode;
-        TDSAcName = data.label_names[0].tdsacname;
+        TDSAcName = data.labels.tdsacname;
         TDSAcCodeNew = data.next_OtherPurchase_data.TDS_AcCode;
-        GStrateName = data.label_names[0].GST_Name;
+        GStrateName = data.labels.GST_Name;
         GStrateCode = data.next_OtherPurchase_data.GST_RateCode;
         setFormData({
           ...formData,
@@ -508,18 +508,18 @@ const OtherPurchase = () => {
 
   const handleLastButtonClick = async () => {
     try {
-      const response = await fetch(`${API_URL}/get-OtherPurchase-lastRecordNavigation?Company_Code=${companyCode}&Year_Code=${Year_Code}`);
+      const response = await fetch(`${API_URL}/get-OtherPurchase-lastRecord?Company_Code=${companyCode}&Year_Code=${Year_Code}`);
       if (response.ok) {
         const data = await response.json();
-        SupplierName = data.label_names[0].SupplierName;
+        SupplierName = data.labels.SupplierName;
         SupplierCode = data.last_OtherPurchase_data.Supplier_Code;
-        Exp_Ac_Name = data.label_names[0].ExpAcName;
+        Exp_Ac_Name = data.labels.ExpAcName;
         Exp_Ac_Code = data.last_OtherPurchase_data.Exp_Ac;
-        TDSCutAcName = data.label_names[0].TDSCutAcName;
+        TDSCutAcName = data.labels.TDSCutAcName;
         TDSCutAcCode = data.last_OtherPurchase_data.TDS_Cutt_AcCode;
-        TDSAcName = data.label_names[0].tdsacname;
+        TDSAcName = data.labels.tdsacname;
         TDSAcCodeNew = data.last_OtherPurchase_data.TDS_AcCode;
-        GStrateName = data.label_names[0].GST_Name;
+        GStrateName = data.labels.GST_Name;
         GStrateCode = data.last_OtherPurchase_data.GST_RateCode;
         setFormData({
           ...formData,

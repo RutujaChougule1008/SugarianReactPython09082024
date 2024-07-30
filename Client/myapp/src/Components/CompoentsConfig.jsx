@@ -31,6 +31,18 @@ import CommissionBill from './Outward/CommissionBill/CommissionBill';
 import CommissionBillUtility from './Outward/CommissionBill/CommissionBillUtility';
 import OtherGSTInput from './Inword/OtherGSTInput/OtherGSTInput';
 import OtherGSTInputUtility from './Inword/OtherGSTInput/OtherGSTInputUtility'
+import PartyUnitMaster from './Master/AccountInformation/PartyUnitMaster/PartyUnitMaster'
+import PartyUnitMasterUtility from './Master/AccountInformation/PartyUnitMaster/PartyUnitMasterUtility';
+import PaymentNote from './Transactions/PaymentNote/PaymentNote';
+import PaymentNoteUtility from './Transactions/PaymentNote/PaymentNoteUtility';
+import WhatsAppURLManager from './Master/WhatsAppAPIIntegration/WhatsAppURLManager';
+import CompanyPrintingInfo from './Utilities/CompanyPrintingInformation/CompanyPrintingInfo';
+import PostDateManager from './Utilities/PostDate/PostDate';
+import CompanyParameters from './Master/CompanyParamter/CompanyParameters';
+import AccountMaster from './Master/AccountInformation/AccountMaster/AccountMaster';
+import AccountMasterUtility from './Master/AccountInformation/AccountMaster/AccountMasterUtility';
+import EBuySugarianUserUtility from './EBuySugarian/EBuySugarinUser/EBuySugarianUserUtility';
+import EBuySugarAccountMasterUtility from './EBuySugarian/EBuySugarinUser/EBuySugarAccountMasterUtility';
 
 const routes = [
   {
@@ -173,9 +185,67 @@ const routes = [
 {
   path:'/OtherGSTInput-utility',
   element: OtherGSTInputUtility
+},
+//Party Unit Master
+{
+  path:'/corporate-customer-limit',
+  element: PartyUnitMaster
+},
+{
+  path:'/PartyUnitMaster-utility',
+  element: PartyUnitMasterUtility
+},
+//PaymentNote
+{
+  path:'/payment-note',
+  element: PaymentNote
+},
+{
+  path: '/PaymentNote-utility',
+  element: PaymentNoteUtility
+},
+//WhatsApp API Integration
+{
+  path:'/whatsapp-api',
+  element: WhatsAppURLManager
+},
+//Our Office Address
+{
+  path:'/our-office-address',
+  element: CompanyPrintingInfo
+},
+//Post Date
+{
+  path: '/post-date',
+  element: PostDateManager
+},
+
+//Company Parameters
+{
+  path: '/company-parameter',
+  element: CompanyParameters
+},
+//Account Master
+{
+  path: '/account-master',
+  element: AccountMaster
+},
+{
+  path: '/AccountMaster-utility',
+  element: AccountMasterUtility
+},
+
+
+//eBuySugar
+{
+  path: '/eBuySugarian-user-utility',
+  element: EBuySugarianUserUtility
+},
+
+{
+  path: '/eBuySugarian-AcMaster-utility',
+  element: EBuySugarAccountMasterUtility
 }
-  
-  
 ];
 
 export default routes;

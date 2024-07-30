@@ -1,34 +1,30 @@
+import traceback
 from flask import Flask, jsonify, request
 from app import app, db
+from app.models.Outword.ServiceBill.ServiceBillModel import ServiceBillHead, ServiceBillDetail
 from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 import os
 
-from app.models.Outward.ServiceBill.ServiceBillModel import ServiceBillHead, ServiceBillDetail
-
+# Get the base URL from environment variables
 API_URL = os.getenv('API_URL')
 
-
-from app.models.Outward.ServiceBill.ServiceBillSchema import ServiceBillHeadSchema, ServiceBillDetailSchema
-from app.utils.CommonGLedgerFunctions import fetch_company_parameters,get_accoid,getSaleAc, get_acShort_Name
-import requests
-
-
 SERVICE_BILL_DETAILS_QUERY = '''
-SELECT        customer.Ac_Code AS partyaccode, customer.Ac_Name_E AS partyname, customer.accoid AS partyacid, tdsac.Ac_Code AS millaccode, tdsac.Ac_Name_E AS millname, tdsac.accoid AS millacid, item.systemid, 
-                         item.System_Code, item.System_Name_E AS itemname, dbo.nt_1_gstratemaster.Doc_no AS gstdocno, dbo.nt_1_gstratemaster.Rate AS gstrate, dbo.nt_1_gstratemaster.gstid AS gstdocid, dbo.nt_1_rentbillhead.Customer_Code, 
-                         dbo.nt_1_rentbillhead.TDS_Ac, dbo.nt_1_rentbillhead.cc, dbo.nt_1_rentbilldetails.Item_Code, dbo.nt_1_rentbilldetails.Doc_No, dbo.nt_1_rentbilldetails.Detail_Id, dbo.nt_1_rentbilldetails.Description, 
-                         dbo.nt_1_rentbilldetails.Amount, dbo.nt_1_rentbilldetails.Company_Code, dbo.nt_1_rentbilldetails.Year_Code, dbo.nt_1_rentbilldetails.ic, dbo.nt_1_rentbilldetails.rbid AS Expr1, dbo.nt_1_rentbilldetails.rbdid, 
-                         dbo.nt_1_rentbillhead.gstid, dbo.nt_1_rentbillhead.ta, dbo.nt_1_rentbillhead.GstRateCode
-FROM            dbo.nt_1_rentbillhead LEFT OUTER JOIN
-                         dbo.nt_1_gstratemaster ON dbo.nt_1_rentbillhead.gstid = dbo.nt_1_gstratemaster.gstid LEFT OUTER JOIN
-                         dbo.nt_1_accountmaster AS tdsac ON dbo.nt_1_rentbillhead.ta = tdsac.accoid LEFT OUTER JOIN
-                         dbo.nt_1_accountmaster AS customer ON dbo.nt_1_rentbillhead.cc = customer.accoid LEFT OUTER JOIN
-                         dbo.nt_1_rentbilldetails LEFT OUTER JOIN
-                         dbo.nt_1_systemmaster AS item ON dbo.nt_1_rentbilldetails.ic = item.systemid ON dbo.nt_1_rentbillhead.rbid = dbo.nt_1_rentbilldetails.rbid
-WHERE        (item.System_Type = 'I') and dbo.nt_1_rentbillhead.rbid = :rbid
-
+SELECT customer.Ac_Name_E AS partyname, tdsac.Ac_Name_E AS millname, item.System_Name_E AS itemname 
+FROM dbo.nt_1_rentbillhead 
+LEFT OUTER JOIN dbo.nt_1_gstratemaster ON dbo.nt_1_rentbillhead.gstid = dbo.nt_1_gstratemaster.gstid 
+LEFT OUTER JOIN dbo.nt_1_accountmaster AS tdsac ON dbo.nt_1_rentbillhead.ta = tdsac.accoid 
+LEFT OUTER JOIN dbo.nt_1_accountmaster AS customer ON dbo.nt_1_rentbillhead.cc = customer.accoid 
+LEFT OUTER JOIN dbo.nt_1_rentbilldetails 
+LEFT OUTER JOIN dbo.nt_1_systemmaster AS item ON dbo.nt_1_rentbilldetails.ic = item.systemid 
+ON dbo.nt_1_rentbillhead.rbid = dbo.nt_1_rentbilldetails.rbid
+WHERE (item.System_Type = 'I') and dbo.nt_1_rentbillhead.rbid = :rbid
 '''
+
+# Import schemas from the schemas module
+from app.models.Outword.ServiceBill.ServiceBillSchema import ServiceBillHeadSchema, ServiceBillDetailSchema
+from app.utils.CommonGLedgerFunctions import fetch_company_parameters, get_accoid, getSaleAc, get_acShort_Name
+import requests
 
 service_bill_head_schema = ServiceBillHeadSchema()
 service_bill_head_schemas = ServiceBillHeadSchema(many=True)
@@ -45,34 +41,58 @@ def format_dates(task):
 @app.route(API_URL + "/getdata-servicebill", methods=["GET"])
 def getdata_servicebill():
     try:
-        
-        head_data = ServiceBillHead.query.all()
-        detail_data = ServiceBillDetail.query.all()
-        # Serialize the data using schemas
-        head_result = service_bill_head_schemas.dump(head_data)
-        detail_result = service_bill_detail_schemas.dump(detail_data)
-        response = {
-            "ServiceBill_Head": head_result,
-            "ServiceBill_Detail": detail_result
-        }
+        Company_Code = request.args.get('Company_Code')
+        Year_Code = request.args.get('Year_Code')
+        if not all([Company_Code, Year_Code]):
+            return jsonify({"error": "Missing required parameters"}), 400
 
+        records = ServiceBillHead.query.filter_by(Company_Code=Company_Code, Year_Code=Year_Code).all()
+
+        if not records:
+            return jsonify({"error": "No records found"}), 404
+
+        all_records_data = []
+
+        for record in records:
+            service_bill_head_data = {column.name: getattr(record, column.name) for column in record.__table__.columns}
+            service_bill_head_data.update(format_dates(record))
+
+            rbid = record.rbid
+            additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
+            additional_data_rows = additional_data.fetchall()
+
+            service_labels = [dict(row._mapping) for row in additional_data_rows]
+
+            detail_records = ServiceBillDetail.query.filter_by(rbid=rbid).all()
+            detail_data = [{column.name: getattr(detail_record, column.name) for column in detail_record.__table__.columns} for detail_record in detail_records]
+
+            record_response = {
+                "service_bill_head_data": service_bill_head_data,
+                "service_labels": service_labels,
+                "service_bill_details": detail_data
+            }
+
+            all_records_data.append(record_response)
+
+        response = {
+            "all_data_servicebill": all_records_data
+        }
         return jsonify(response), 200
+
     except Exception as e:
-        
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 # Get data by the particular doc_no
 @app.route(API_URL + "/getservicebillByid", methods=["GET"])
 def getservicebillByid():
     try:
-        # Extract doc_no from request query parameters
         Company_Code = request.args.get('Company_Code')
         doc_no = request.args.get('doc_no')
         Year_Code = request.args.get('Year_Code')
         if not all([Company_Code, doc_no, Year_Code]):
             return jsonify({"error": "Missing required parameters"}), 400
 
-        service_bill_head = ServiceBillHead.query.filter_by(doc_no=doc_no,Company_Code=Company_Code,Year_Code=Year_Code).first()
+        service_bill_head = ServiceBillHead.query.filter_by(Doc_No=doc_no, Company_Code=Company_Code, Year_Code=Year_Code).first()
         if not service_bill_head:
             return jsonify({"error": "No records found"}), 404
 
@@ -80,23 +100,15 @@ def getservicebillByid():
         additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        itemName = row.itemname if row else None
-        gstRate = row.gstrate if row else None
+        service_labels = [dict(row._mapping) for row in additional_data_rows]
 
-       
         response = {
             "service_bill_head": {
                 **{column.name: getattr(service_bill_head, column.name) for column in service_bill_head.__table__.columns},
-                **format_dates(service_bill_head),
-                "partyName" : partyName,
-                "millName" : millName,
-                "itemName" : itemName,
-                "gstRate" : gstRate
+                **format_dates(service_bill_head)
             },
-            "service_bill_details": [{"Doc_No": row.Doc_No,"Detail_Id": row.Detail_Id, "Amount": row.Amount, "Item_Code": row.Item_Code, "Description": row.Description,"ic": row.ic,"rbdid":row.rbdid} for row in additional_data_rows]
+            "service_labels": service_labels,
+            "service_bill_details": [{column.name: getattr(detail, column.name) for column in detail.__table__.columns} for detail in ServiceBillDetail.query.filter_by(rbid=rbid).all()]
         }
 
         return jsonify(response), 200
@@ -477,17 +489,18 @@ def delete_data_by_rbid():
        
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
-
+    
+    
 # Fetch the last record from the database by rbid
 @app.route(API_URL + "/get-lastservicebilldata", methods=["GET"])
 def get_lastservicebilldata():
     try:
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code]):
+        if not all([Company_Code, Year_Code]):
             return jsonify({"error": "Missing required parameters"}), 400
 
-        last_service_bill_head = ServiceBillHead.query.filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ServiceBillHead.rbid.desc()).first()
+        last_service_bill_head = ServiceBillHead.query.filter_by(Company_Code=Company_Code, Year_Code=Year_Code).order_by(ServiceBillHead.Doc_No.desc()).first()
         if not last_service_bill_head:
             return jsonify({"error": "No records found in ServiceBillHead table"}), 404
 
@@ -495,26 +508,18 @@ def get_lastservicebilldata():
         additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        itemName = row.itemname if row else None
-        gstRate = row.gstrate if row else None
+        service_labels = [dict(row._mapping) for row in additional_data_rows]
 
-        
         last_head_data = {
             **{column.name: getattr(last_service_bill_head, column.name) for column in last_service_bill_head.__table__.columns},
-            **format_dates(last_service_bill_head),
-            "partyName" : partyName,
-            "millName" : millName,
-            "itemName" : itemName,
-            "gstRate" : gstRate
+            **format_dates(last_service_bill_head)
         }
 
-        last_details_data = [{"Doc_No": row.Doc_No,"Detail_Id": row.Detail_Id, "Amount": row.Amount, "Item_Code": row.Item_Code, "Description": row.Description,"ic": row.ic,"rbdid":row.rbdid} for row in additional_data_rows]
+        last_details_data = [{column.name: getattr(detail, column.name) for column in detail.__table__.columns} for detail in ServiceBillDetail.query.filter_by(rbid=rbid).all()]
 
         response = {
             "last_head_data": last_head_data,
+            "service_labels": service_labels,
             "last_details_data": last_details_data
         }
 
@@ -528,9 +533,10 @@ def get_firstservicebill_navigation():
     try:
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code]):
+        if not all([Company_Code, Year_Code]):
             return jsonify({"error": "Missing required parameters"}), 400
-        first_service_bill_head = ServiceBillHead.query.filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ServiceBillHead.rbid.asc()).first()
+
+        first_service_bill_head = ServiceBillHead.query.filter_by(Company_Code=Company_Code, Year_Code=Year_Code).order_by(ServiceBillHead.Doc_No.asc()).first()
         if not first_service_bill_head:
             return jsonify({"error": "No records found in ServiceBillHead table"}), 404
 
@@ -538,26 +544,18 @@ def get_firstservicebill_navigation():
         additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        itemName = row.itemname if row else None
-        gstRate = row.gstrate if row else None
+        service_labels = [dict(row._mapping) for row in additional_data_rows]
 
-        
         first_head_data = {
             **{column.name: getattr(first_service_bill_head, column.name) for column in first_service_bill_head.__table__.columns},
-            **format_dates(first_service_bill_head),
-            "partyName" : partyName,
-            "millName" : millName,
-            "itemName" : itemName,
-            "gstRate" : gstRate
+            **format_dates(first_service_bill_head)
         }
 
-        first_details_data = [{"Doc_No": row.Doc_No,"Detail_Id": row.Detail_Id, "Amount": row.Amount, "Item_Code": row.Item_Code, "Description": row.Description,"ic": row.ic,"rbdid":row.rbdid} for row in additional_data_rows]
+        first_details_data = [{column.name: getattr(detail, column.name) for column in detail.__table__.columns} for detail in ServiceBillDetail.query.filter_by(rbid=rbid).all()]
 
         response = {
             "first_head_data": first_head_data,
+            "service_labels": service_labels,
             "first_details_data": first_details_data
         }
 
@@ -572,10 +570,10 @@ def get_lastservicebill_navigation():
     try:
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code]):
+        if not all([Company_Code, Year_Code]):
             return jsonify({"error": "Missing required parameters"}), 400
-        
-        last_service_bill_head = ServiceBillHead.query.filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ServiceBillHead.rbid.desc()).first()
+
+        last_service_bill_head = ServiceBillHead.query.filter_by(Company_Code=Company_Code, Year_Code=Year_Code).order_by(ServiceBillHead.Doc_No.desc()).first()
         if not last_service_bill_head:
             return jsonify({"error": "No records found in ServiceBillHead table"}), 404
 
@@ -583,26 +581,18 @@ def get_lastservicebill_navigation():
         additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        itemName = row.itemname if row else None
-        gstRate = row.gstrate if row else None
+        service_labels = [dict(row._mapping) for row in additional_data_rows]
 
-       
         last_head_data = {
             **{column.name: getattr(last_service_bill_head, column.name) for column in last_service_bill_head.__table__.columns},
-            **format_dates(last_service_bill_head),
-            "partyName" : partyName,
-            "millName" : millName,
-            "itemName" : itemName,
-            "gstRate" : gstRate
+            **format_dates(last_service_bill_head)
         }
 
-        last_details_data = [{"Doc_No": row.Doc_No,"Detail_Id": row.Detail_Id, "Amount": row.Amount, "Item_Code": row.Item_Code, "Description": row.Description,"ic": row.ic,"rbdid":row.rbdid} for row in additional_data_rows]
+        last_details_data = [{column.name: getattr(detail, column.name) for column in detail.__table__.columns} for detail in ServiceBillDetail.query.filter_by(rbid=rbid).all()]
 
         response = {
             "last_head_data": last_head_data,
+            "service_labels": service_labels,
             "last_details_data": last_details_data
         }
 
@@ -618,10 +608,9 @@ def get_previousservicebill_navigation():
         current_doc_no = request.args.get('currentDocNo')
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code,current_doc_no]):
+        if not all([Company_Code, Year_Code, current_doc_no]):
             return jsonify({"error": "Missing required parameters"}), 400
 
-        
         previous_service_bill_head = ServiceBillHead.query.filter(ServiceBillHead.Doc_No < current_doc_no).order_by(ServiceBillHead.Doc_No.desc()).first()
         if not previous_service_bill_head:
             return jsonify({"error": "No previous records found"}), 404
@@ -630,26 +619,18 @@ def get_previousservicebill_navigation():
         additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        itemName = row.itemname if row else None
-        gstRate = row.gstrate if row else None
+        service_labels = [dict(row._mapping) for row in additional_data_rows]
 
-        
         previous_head_data = {
             **{column.name: getattr(previous_service_bill_head, column.name) for column in previous_service_bill_head.__table__.columns},
-            **format_dates(previous_service_bill_head),
-            "partyName" : partyName,
-            "millName" : millName,
-            "itemName" : itemName,
-            "gstRate" : gstRate
+            **format_dates(previous_service_bill_head)
         }
 
-        previous_details_data = [{"Doc_No": row.Doc_No,"Detail_Id": row.Detail_Id, "Amount": row.Amount, "Item_Code": row.Item_Code, "Description": row.Description,"ic": row.ic,"rbdid":row.rbdid} for row in additional_data_rows]
+        previous_details_data = [{column.name: getattr(detail, column.name) for column in detail.__table__.columns} for detail in ServiceBillDetail.query.filter_by(rbid=rbid).all()]
 
         response = {
             "previous_head_data": previous_head_data,
+            "service_labels": service_labels,
             "previous_details_data": previous_details_data
         }
 
@@ -665,10 +646,10 @@ def get_nextservicebill_navigation():
         current_doc_no = request.args.get('currentDocNo')
         Company_Code = request.args.get('Company_Code')
         Year_Code = request.args.get('Year_Code')
-        if not all([ Company_Code, Year_Code, current_doc_no ]):
+        if not all([Company_Code, Year_Code, current_doc_no]):
             return jsonify({"error": "Missing required parameters"}), 400
-       
-        next_service_bill_head = ServiceBillHead.query.filter(ServiceBillHead.Doc_No > current_doc_no).filter_by(Company_Code=Company_Code,Year_Code=Year_Code).order_by(ServiceBillHead.Doc_No.asc()).first()
+
+        next_service_bill_head = ServiceBillHead.query.filter(ServiceBillHead.Doc_No > current_doc_no).filter_by(Company_Code=Company_Code, Year_Code=Year_Code).order_by(ServiceBillHead.Doc_No.asc()).first()
         if not next_service_bill_head:
             return jsonify({"error": "No next records found"}), 404
 
@@ -676,26 +657,18 @@ def get_nextservicebill_navigation():
         additional_data = db.session.execute(text(SERVICE_BILL_DETAILS_QUERY), {"rbid": rbid})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        itemName = row.itemname if row else None
-        gstRate = row.gstrate if row else None
+        service_labels = [dict(row._mapping) for row in additional_data_rows]
 
-        
         next_head_data = {
             **{column.name: getattr(next_service_bill_head, column.name) for column in next_service_bill_head.__table__.columns},
-            **format_dates(next_service_bill_head),
-            "partyName" : partyName,
-            "millName" : millName,
-            "itemName" : itemName,
-            "gstRate" : gstRate
+            **format_dates(next_service_bill_head)
         }
 
-        next_details_data = [{"Doc_No": row.Doc_No,"Detail_Id": row.Detail_Id, "Amount": row.Amount, "Item_Code": row.Item_Code, "Description": row.Description,"ic": row.ic,"rbdid":row.rbdid} for row in additional_data_rows]
+        next_details_data = [{column.name: getattr(detail, column.name) for column in detail.__table__.columns} for detail in ServiceBillDetail.query.filter_by(rbid=rbid).all()]
 
         response = {
             "next_head_data": next_head_data,
+            "service_labels": service_labels,
             "next_details_data": next_details_data
         }
 

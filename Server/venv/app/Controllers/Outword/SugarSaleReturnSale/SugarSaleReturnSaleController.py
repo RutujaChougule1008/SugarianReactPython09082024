@@ -1,11 +1,12 @@
+import traceback
 from flask import Flask, jsonify, request
 from app import app, db
 from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 import os
 
-from app.models.Outward.SugarSaleReturnSale.SugarSaleReturnSaleModel import SugarSaleReturnSaleHead,SugarSaleReturnSaleDetail
-from app.models.Outward.SugarSaleReturnSale.SugarSaleReturnSaleSchema import SugarSaleReturnSaleHeadSchema, SugarSaleReturnSaleDetailSchema
+from app.models.Outword.SugarSaleReturnSale.SugarSaleReturnSaleModel import SugarSaleReturnSaleHead,SugarSaleReturnSaleDetail
+from app.models.Outword.SugarSaleReturnSale.SugarSaleReturnSaleSchema import SugarSaleReturnSaleHeadSchema, SugarSaleReturnSaleDetailSchema
 
 API_URL = os.getenv('API_URL')
 
@@ -13,13 +14,8 @@ from app.utils.CommonGLedgerFunctions import fetch_company_parameters,get_accoid
 import requests
 
 SUGAR_SALE_RETURN_DETAILS_QUERY = '''
-SELECT accode.Ac_Code AS partyaccode, accode.Ac_Name_E AS partyname, accode.accoid AS partyacid, mill.Ac_Code AS millaccode, mill.Ac_Name_E AS millname, mill.accoid AS millacid, unit.Ac_Code AS unitaccode, 
-                  unit.Ac_Name_E AS unitname, broker.Ac_Code AS brokeraccode, broker.Ac_Name_E AS brokername, unit.accoid AS unitacid, broker.accoid AS brokeracid, item.systemid, item.System_Code, item.System_Name_E AS itemname, 
-                  dbo.nt_1_gstratemaster.Doc_no AS gstdocno, dbo.nt_1_gstratemaster.Rate AS gstrate, dbo.nt_1_gstratemaster.gstid AS gstdocid, transport.Ac_Code AS transportaccode, transport.Ac_Name_E AS transportname, 
-                  billto.Ac_Code AS billtoaccode, billto.Ac_Name_E AS billtoname, billto.accoid AS billtoacid, transport.accoid AS transportacid, dbo.nt_1_sugarsalereturn.Ac_Code, dbo.nt_1_sugarsalereturn.Unit_Code, dbo.nt_1_sugarsalereturn.mill_code, 
-                  dbo.nt_1_sugarsalereturn.BROKER, dbo.nt_1_sugarsalereturn.Transport_Code, dbo.nt_1_sugarsalereturn.ac, dbo.nt_1_sugarsalereturn.uc, dbo.nt_1_sugarsalereturn.mc, dbo.nt_1_sugarsalereturn.bc, dbo.nt_1_sugarsalereturn.bill_to, 
-                  dbo.nt_1_sugarsalereturn.bt, dbo.nt_1_sugarsalereturn.gc, dbo.nt_1_sugarsalereturn.tc, dbo.nt_1_sugarsalereturn.FromAc, dbo.nt_1_sugarsalereturn.fa, dbo.nt_1_sugarsalereturn.gstid, fromac.Ac_Code AS fromaccode, 
-                  fromac.Ac_Name_E AS fromacname, fromac.accoid AS fromacid, dbo.nt_1_sugarsaledetailsreturn.*
+SELECT accode.Ac_Name_E AS partyname, mill.Ac_Name_E AS millname, unit.Ac_Name_E AS unitname, broker.Ac_Name_E AS brokername, item.System_Name_E AS itemname, transport.Ac_Name_E AS transportname, 
+                  billto.Ac_Name_E AS billtoname, fromac.Ac_Name_E AS fromacname, dbo.nt_1_gstratemaster.GST_Name
 FROM     dbo.nt_1_accountmaster AS accode RIGHT OUTER JOIN
                   dbo.nt_1_accountmaster AS unit RIGHT OUTER JOIN
                   dbo.nt_1_accountmaster AS fromac RIGHT OUTER JOIN
@@ -47,111 +43,254 @@ def format_dates(task):
         "doc_date": task.doc_date.strftime('%Y-%m-%d') if task.doc_date else None,
     }
 
-# Get data from both tables SugarSaleReturnHead and SugarSaleReturnDetail
 @app.route(API_URL + "/getdata-sugarsalereturn", methods=["GET"])
 def getdata_sugarsalereturn():
     try:
-        head_data = SugarSaleReturnSaleHead.query.all()
-        detail_data = SugarSaleReturnSaleDetail.query.all()
-        # Serialize the data using schemas
-        head_result = sugar_sale_return_head_schemas.dump(head_data)
-        detail_result = sugar_sale_return_detail_schemas.dump(detail_data)
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
+
+        if not company_code or not year_code:
+            return jsonify({"error": "Missing 'Company_Code' or 'Year_Code' parameter"}), 400
+        
+        records = SugarSaleReturnSaleHead.query.filter_by(Company_Code=company_code, Year_Code=year_code).all()
+
+        if not records:
+            return jsonify({"error": "No records found"}), 404
+
+        all_records_data = []
+
+        for record in records:
+            returnPurchaseData = {column.name: getattr(record, column.name) for column in record.__table__.columns}
+            returnPurchaseData.update(format_dates(record))
+
+            additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": record.srid})
+            additional_data_rows = additional_data.fetchall()
+
+            returnPurchaseLabels = [dict(row._mapping) for row in additional_data_rows]
+
+            record_response = {
+                "returnPurchaseData": returnPurchaseData,
+                "returnPurchaseLabels": returnPurchaseLabels
+            }
+
+            all_records_data.append(record_response)
+
         response = {
-            "SugarSaleReturn_Head": head_result,
-            "SugarSaleReturn_Detail": detail_result
+            "all_data_sugarReturnPurchase": all_records_data
         }
-
         return jsonify(response), 200
-    except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
-# Get data by the particular doc_no
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+
 @app.route(API_URL + "/getsugarsalereturnByid", methods=["GET"])
 def getsugarsalereturnByid():
     try:
-        # Extract doc_no from request query parameters
         doc_no = request.args.get('doc_no')
         company_code = request.args.get('Company_Code')
         year_code = request.args.get('Year_Code')
-        if not all([company_code, year_code, doc_no]):
-            return jsonify({"error": "Missing required parameters"}), 400
 
+        if not company_code or not year_code or not doc_no:
+            return jsonify({"error": "Missing 'Company_Code', 'Year_Code', or 'doc_no' parameter"}), 400
 
-        sugar_sale_return_head = SugarSaleReturnSaleHead.query.filter_by(doc_no=doc_no, Company_Code=company_code, Year_Code = year_code).first()
+        sugar_sale_return_head = SugarSaleReturnSaleHead.query.filter_by(doc_no=doc_no, Company_Code=company_code, Year_Code=year_code).first()
+
         if not sugar_sale_return_head:
             return jsonify({"error": "No records found"}), 404
 
-        srid = sugar_sale_return_head.srid
-        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": srid})
+        newsugarSaleReturn_id = sugar_sale_return_head.srid
+
+        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": newsugarSaleReturn_id})
         additional_data_rows = additional_data.fetchall()
 
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        unitName = row.unitname if row else None
-        brokerName = row.brokername if row else None
-        itemName = row.itemname if row else None
-        gstrateName = row.gstrate if row else None
-        transportName = row.transportname if row else None
-        billtoName = row.billtoname if row else None
-        fromacName = row.fromacname if row else None
+        last_head_data = {column.name: getattr(sugar_sale_return_head, column.name) for column in sugar_sale_return_head.__table__.columns}
+        last_head_data.update(format_dates(sugar_sale_return_head))
 
+        last_details_data = [dict(row._mapping) for row in additional_data_rows]
 
+        detail_records = SugarSaleReturnSaleDetail.query.filter_by(srid=newsugarSaleReturn_id).all()
 
-
+        detail_data = [{column.name: getattr(detail_record, column.name) for column in detail_record.__table__.columns} for detail_record in detail_records]
 
         response = {
-            "sugar_sale_return_head": {
-                **{column.name: getattr(sugar_sale_return_head, column.name) for column in sugar_sale_return_head.__table__.columns},
-                **format_dates(sugar_sale_return_head),
-                "partyName":partyName,
-                "millName":millName,
-                "unitName":unitName,
-                "brokerName":brokerName,
-                "itemName":itemName,
-                "gstrateName":gstrateName,
-                "transportName":transportName,
-                "billtoName":billtoName,
-                "fromacName":fromacName
-                
-            },
-            "sugar_sale_return_details": [{
-                "doc_no" : row.doc_no,
-                "detail_id": row.detail_id,
-                "Tran_Type": row.Tran_Type,
-                "item_code": row.item_code,
-                "narration": row.narration,
-                "Quantal": row.Quantal,
-                "packing": row.packing,
-                "bags": row.bags,
-                "rate": row.rate,
-                "item_Amount": row.item_Amount,
-                "Company_Code": row.Company_Code,
-                "Year_Code": row.Year_Code,
-                "Branch_Code": row.Branch_Code,
-                "Created_By": row.Created_By,
-                "Modified_By": row.Modified_By,
-                "srid": row.srid,
-                "srdtid": row.srdtid,
-                "ic": row.ic
-            } for row in additional_data_rows]
+            "last_head_data": last_head_data,
+            "last_labels_data": last_details_data,
+            "detail_data": detail_data
+        }
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route(API_URL + "/get-last-sugarsalereturn", methods=["GET"])
+def get_last_sugarsalereturn():
+    try:
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
+
+        if not company_code or not year_code:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        last_sugarSaleReturn = SugarSaleReturnSaleHead.query.filter_by(Company_Code=company_code, Year_Code=year_code).order_by(SugarSaleReturnSaleHead.doc_no.desc()).first()
+
+        if not last_sugarSaleReturn:
+            return jsonify({"error": "No records found"}), 404
+
+        last_srid = last_sugarSaleReturn.srid
+
+        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": last_srid})
+        additional_data_rows = additional_data.fetchall()
+
+        last_head_data = {column.name: getattr(last_sugarSaleReturn, column.name) for column in last_sugarSaleReturn.__table__.columns}
+        last_head_data.update(format_dates(last_sugarSaleReturn))
+
+        last_details_data = [dict(row._mapping) for row in additional_data_rows]
+
+        detail_records = SugarSaleReturnSaleDetail.query.filter_by(srid=last_srid).all()
+
+        detail_data = [{column.name: getattr(detail_record, column.name) for column in detail_record.__table__.columns} for detail_record in detail_records]
+
+        response = {
+            "last_head_data": last_head_data,
+            "last_labels_data": last_details_data,
+            "detail_data": detail_data
         }
 
         return jsonify(response), 200
 
     except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
 
-# Insert record for SugarSaleReturnHead and SugarSaleReturnDetail
-@app.route(API_URL + "/insert-sugarsalereturn", methods=["POST"])
-def insert_sugarsalereturn():
-    def get_max_doc_no(tran_type):
-        return db.session.query(func.max(SugarSaleReturnSaleHead.doc_no)).filter(SugarSaleReturnSaleHead.Tran_Type == tran_type).scalar() or 0
-    
+@app.route(API_URL + "/get-first-sugarsalereturn", methods=["GET"])
+def get_first_sugarsalereturn():
+    try:
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
+
+        if not company_code or not year_code:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        first_sugarSaleReturn = SugarSaleReturnSaleHead.query.filter_by(Company_Code=company_code, Year_Code=year_code).order_by(SugarSaleReturnSaleHead.doc_no.asc()).first()
+
+        if not first_sugarSaleReturn:
+            return jsonify({"error": "No records found"}), 404
+
+        first_srid = first_sugarSaleReturn.srid
+
+        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": first_srid})
+        additional_data_rows = additional_data.fetchall()
+
+        first_head_data = {column.name: getattr(first_sugarSaleReturn, column.name) for column in first_sugarSaleReturn.__table__.columns}
+        first_head_data.update(format_dates(first_sugarSaleReturn))
+
+        first_details_data = [dict(row._mapping) for row in additional_data_rows]
+
+        detail_records = SugarSaleReturnSaleDetail.query.filter_by(srid=first_srid).all()
+
+        detail_data = [{column.name: getattr(detail_record, column.name) for column in detail_record.__table__.columns} for detail_record in detail_records]
+
+        response = {
+            "first_head_data": first_head_data,
+            "first_labels_data": first_details_data,
+            "detail_data": detail_data
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route(API_URL + "/get-previous-sugarsalereturn", methods=["GET"])
+def get_previous_sugarsalereturn():
+    try:
+        current_doc_no = request.args.get('doc_no')
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
+
+        if not current_doc_no or not company_code or not year_code:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        previous_sugarSaleReturn = SugarSaleReturnSaleHead.query.filter_by(Company_Code=company_code, Year_Code=year_code).filter(SugarSaleReturnSaleHead.doc_no < current_doc_no).order_by(SugarSaleReturnSaleHead.doc_no.desc()).first()
+
+        if not previous_sugarSaleReturn:
+            return jsonify({"error": "No previous records found"}), 404
+
+        previous_srid = previous_sugarSaleReturn.srid
+
+        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": previous_srid})
+        additional_data_rows = additional_data.fetchall()
+
+        previous_head_data = {column.name: getattr(previous_sugarSaleReturn, column.name) for column in previous_sugarSaleReturn.__table__.columns}
+        previous_head_data.update(format_dates(previous_sugarSaleReturn))
+
+        previous_details_data = [dict(row._mapping) for row in additional_data_rows]
+
+        detail_records = SugarSaleReturnSaleDetail.query.filter_by(srid=previous_srid).all()
+
+        detail_data = [{column.name: getattr(detail_record, column.name) for column in detail_record.__table__.columns} for detail_record in detail_records]
+
+        response = {
+            "previous_head_data": previous_head_data,
+            "previous_labels_data": previous_details_data,
+            "detail_data": detail_data
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route(API_URL + "/get-next-sugarsalereturn", methods=["GET"])
+def get_next_sugarsalereturn():
+    try:
+        current_doc_no = request.args.get('doc_no')
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
+
+        if not current_doc_no or not company_code or not year_code:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        sugarSaleReturn = SugarSaleReturnSaleHead.query.filter(SugarSaleReturnSaleHead.doc_no > current_doc_no).filter_by(Company_Code=company_code, Year_Code=year_code).order_by(SugarSaleReturnSaleHead.doc_no.asc()).first()
+
+        if not sugarSaleReturn:
+            return jsonify({"error": "No next records found"}), 404
+
+        next_srid = sugarSaleReturn.srid
+
+        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": next_srid})
+        additional_data_rows = additional_data.fetchall()
+
+        next_head_data = {column.name: getattr(sugarSaleReturn, column.name) for column in sugarSaleReturn.__table__.columns}
+        next_head_data.update(format_dates(sugarSaleReturn))
+
+        next_details_data = [dict(row._mapping) for row in additional_data_rows]
+
+        detail_records = SugarSaleReturnSaleDetail.query.filter_by(srid=next_srid).all()
+
+        detail_data = [{column.name: getattr(detail_record, column.name) for column in detail_record.__table__.columns} for detail_record in detail_records]
+
+        response = {
+            "next_head_data": next_head_data,
+            "next_labels_data": next_details_data,
+            "detail_data": detail_data
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route(API_URL + "/create-sugarsalereturn", methods=["POST"])
+def create_sugarsalereturn():
+    def get_max_doc_no(company_code, year_code):
+        return db.session.query(func.max(SugarSaleReturnSaleHead.doc_no)).filter(
+            SugarSaleReturnSaleHead.Company_Code == company_code,
+            SugarSaleReturnSaleHead.Year_Code == year_code
+        ).scalar() or 0
 
     def create_gledger_entry(data, amount, drcr, ac_code, accoid):
         return {
-            "TRAN_TYPE": tran_type,
+            "TRAN_TYPE": data['Tran_Type'],
             "DOC_NO": new_doc_no,
             "DOC_DATE": data['doc_date'],
             "AC_CODE": ac_code,
@@ -162,13 +301,13 @@ def insert_sugarsalereturn():
             "DRCR": drcr,
             "UNIT_Code": 0,
             "NARRATION": "As Per BillNo: " + str(data['doc_no']),
-           "TENDER_ID": 0,
+            "TENDER_ID": 0,
             "TENDER_ID_DETAIL": 0,
             "VOUCHER_ID": 0,
             "DRCR_HEAD": 0,
             "ADJUSTED_AMOUNT": 0,
             "Branch_Code": 1,
-            "SORT_TYPE": tran_type,
+            "SORT_TYPE": data['Tran_Type'],
             "SORT_NO": new_doc_no,
             "vc": 0,
             "progid": 0,
@@ -180,34 +319,30 @@ def insert_sugarsalereturn():
     def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid):
         if amount > 0:
             entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid))
+
     try:
-
         data = request.get_json()
-        head_data = data['head_data']
-        detail_data = data['detail_data']
+        headData = data['headData']
+        detailData = data['detailData']
 
-        tran_type = head_data.get('Tran_Type')
-        if not tran_type:
-            return jsonify({"error": "Bad Request", "message": "tran_type  is required"}), 400
+        company_code = headData.get('Company_Code')
+        year_code = headData.get('Year_Code')
 
-        max_doc_no = get_max_doc_no(tran_type)
+        max_doc_no = get_max_doc_no(company_code, year_code)
 
-        # Increment the doc_no for the new entry
         new_doc_no = max_doc_no + 1
-        head_data['doc_no'] = new_doc_no
+        headData['doc_no'] = new_doc_no
 
-        
-
-        new_head = SugarSaleReturnSaleHead(**head_data)
+        new_head = SugarSaleReturnSaleHead(**headData)
         db.session.add(new_head)
 
         created_details = []
         updated_details = []
         deleted_detail_ids = []
 
-        for item in detail_data:
+        for item in detailData:
             item['doc_no'] = new_doc_no
-            item['Tran_Type'] = tran_type
+            item['Tran_Type'] = headData['Tran_Type']
             item['srid'] = new_head.srid
             if 'rowaction' in item and item['rowaction'] == "add":
                 del item['rowaction']
@@ -230,74 +365,73 @@ def insert_sugarsalereturn():
 
         db.session.commit()
 
-        igst_amount = float(head_data.get('IGSTAmount', 0) or 0)
-        bill_amount = float(head_data.get('Bill_Amount', 0) or 0)
-        sgst_amount = float(head_data.get('SGSTAmount', 0) or 0)
-        cgst_amount = float(head_data.get('CGSTAmount', 0) or 0)
-        TCS_Amt = float(head_data.get('TCS_Amt', 0) or 0)
-        TDS_Amt = float(head_data.get('TDS_Amt', 0) or 0)
-        Other_Amt = float(head_data.get('OTHER_Amt',0) or 0)
-    
+        igst_amount = float(headData.get('IGSTAmount', 0) or 0)
+        bill_amount = float(headData.get('Bill_Amount', 0) or 0)
+        sgst_amount = float(headData.get('SGSTAmount', 0) or 0)
+        cgst_amount = float(headData.get('CGSTAmount', 0) or 0)
+        TCS_Amt = float(headData.get('TCS_Amt', 0) or 0)
+        TDS_Amt = float(headData.get('TDS_Amt', 0) or 0)
+        Other_Amt = float(headData.get('OTHER_Amt', 0) or 0)
 
-        company_parameters = fetch_company_parameters(head_data['Company_Code'], head_data['Year_Code'])
+        company_parameters = fetch_company_parameters(company_code, year_code)
 
         gledger_entries = []
 
         if igst_amount > 0:
             ac_code = company_parameters.IGSTAc
-            accoid = get_accoid(company_parameters.IGSTAc,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, igst_amount, "C", ac_code, accoid)
+            accoid = get_accoid(company_parameters.IGSTAc, company_code)
+            add_gledger_entry(gledger_entries, headData, igst_amount, "D", ac_code, accoid)
 
         if cgst_amount > 0:
             ac_code = company_parameters.CGSTAc
-            accoid = get_accoid(company_parameters.CGSTAc,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, cgst_amount, "C", ac_code, accoid)
+            accoid = get_accoid(company_parameters.CGSTAc, company_code)
+            add_gledger_entry(gledger_entries, headData, cgst_amount, "D", ac_code, accoid)
 
         if sgst_amount > 0:
             ac_code = company_parameters.SGSTAc
-            accoid = get_accoid(company_parameters.SGSTAc,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, sgst_amount, "C", ac_code, accoid)
-        
+            accoid = get_accoid(company_parameters.SGSTAc, company_code)
+            add_gledger_entry(gledger_entries, headData, sgst_amount, "D", ac_code, accoid)
+
         if TCS_Amt > 0:
-            ac_code = head_data['FromAc']
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, TCS_Amt, 'C', ac_code, accoid)
+            ac_code = headData['Ac_Code']
+            accoid = get_accoid(ac_code, company_code)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, 'D', ac_code, accoid)
             ac_code = company_parameters.SaleTCSAc
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, TCS_Amt, 'D', ac_code, accoid)
+            accoid = get_accoid(ac_code, company_code)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, 'C', ac_code, accoid)
 
         if TDS_Amt > 0:
-            ac_code = head_data['FromAc']
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, TDS_Amt, 'D', ac_code, accoid)
+            ac_code = headData['Ac_Code']
+            accoid = get_accoid(ac_code, company_code)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, 'C', ac_code, accoid)
             ac_code = company_parameters.SaleTDSAc
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, TDS_Amt, 'C', ac_code, accoid)
+            accoid = get_accoid(ac_code, company_code)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, 'D', ac_code, accoid)
 
         if Other_Amt > 0:
-            ac_code = company_parameters.OtherAmountAc
-            accoid = get_accoid(ac_code, head_data['Company_Code'])
-            add_gledger_entry(gledger_entries, head_data, Other_Amt, 'C', ac_code, accoid)
+            ac_code = company_parameters.OTHER_AMOUNT_AC
+            accoid = get_accoid(ac_code, company_code)
+            add_gledger_entry(gledger_entries, headData, Other_Amt, 'D', ac_code, accoid)
         else:
-            add_gledger_entry(gledger_entries, head_data, Other_Amt, 'D', ac_code, accoid) 
+            ac_code = company_parameters.OTHER_AMOUNT_AC
+            accoid = get_accoid(ac_code, company_code)
+            add_gledger_entry(gledger_entries, headData, Other_Amt, 'C', ac_code, accoid)
 
+        add_gledger_entry(gledger_entries, headData, bill_amount, "C", headData['Ac_Code'], get_accoid(headData['Ac_Code'], company_code))
 
-
-        add_gledger_entry(gledger_entries, head_data, bill_amount, "D", head_data['FromAc'], get_accoid(head_data['FromAc'],head_data['Company_Code']))
-
-        for item in detail_data:
+        for item in detailData:
             Item_amount = float(item.get('item_Amount', 0) or 0)
             ic = item['ic']
 
-            if Item_amount>0:
+            if Item_amount > 0:
                 ac_code = getSaleAc(ic)
-                add_gledger_entry(gledger_entries, head_data, Item_amount, 'C', ac_code, get_accoid(ac_code,head_data['Company_Code'])) 
-                
+                add_gledger_entry(gledger_entries, headData, Item_amount, 'D', ac_code, get_accoid(ac_code, company_code))
+
         query_params = {
-            'Company_Code': head_data['Company_Code'],
+            'Company_Code': headData['Company_Code'],
             'DOC_NO': new_doc_no,
-            'Year_Code': head_data['Year_Code'],
-            'TRAN_TYPE': tran_type
+            'Year_Code': headData['Year_Code'],
+            'TRAN_TYPE': headData['Tran_Type']
         }
 
         response = requests.post("http://localhost:8080/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
@@ -308,23 +442,20 @@ def insert_sugarsalereturn():
             db.session.rollback()
             return jsonify({"error": "Failed to create gLedger record", "details": response.json()}), response.status_code
 
-
         return jsonify({
-            "message": "Data Inserted successfully",
+            "message": "Data inserted successfully",
             "head": sugar_sale_return_head_schema.dump(new_head),
-            "addedDetails": sugar_sale_return_detail_schemas.dump(created_details),
+            "createdDetails": sugar_sale_return_detail_schemas.dump(created_details),
             "updatedDetails": updated_details,
             "deletedDetailIds": deleted_detail_ids
         }), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
 
-# Update record for SugarSaleReturnHead and SugarSaleReturnDetail
 @app.route(API_URL + "/update-sugarsalereturn", methods=["PUT"])
 def update_sugarsalereturn():
-    
     def create_gledger_entry(data, amount, drcr, ac_code, accoid):
         return {
             "TRAN_TYPE": tran_type,
@@ -338,7 +469,7 @@ def update_sugarsalereturn():
             "DRCR": drcr,
             "UNIT_Code": 0,
             "NARRATION": "As Per BillNo: " + str(data['doc_no']),
-           "TENDER_ID": 0,
+            "TENDER_ID": 0,
             "TENDER_ID_DETAIL": 0,
             "VOUCHER_ID": 0,
             "DRCR_HEAD": 0,
@@ -356,20 +487,20 @@ def update_sugarsalereturn():
     def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid):
         if amount > 0:
             entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid))
+
     try:
         srid = request.args.get('srid')
-        if not srid :
-            return jsonify({"error": "Missing 'srid' parameter"}), 400 
+        if not srid:
+            return jsonify({"error": "Missing 'srid' parameter"}), 400
 
         data = request.get_json()
-        head_data = data['head_data']
-        detail_data = data['detail_data']
+        head_data = data['headData']
+        detail_data = data['detailData']
 
         tran_type = head_data.get('Tran_Type')
-        if not tran_type :
+        if not tran_type:
             return jsonify({"error": "Bad Request", "message": "tran_type is required"}), 400
 
-        # Update the head data
         updated_head_count = db.session.query(SugarSaleReturnSaleHead).filter(SugarSaleReturnSaleHead.srid == srid).update(head_data)
         updated_head = SugarSaleReturnSaleHead.query.filter_by(srid=srid).first()
 
@@ -410,8 +541,7 @@ def update_sugarsalereturn():
         cgst_amount = float(head_data.get('CGSTAmount', 0) or 0)
         TCS_Amt = float(head_data.get('TCS_Amt', 0) or 0)
         TDS_Amt = float(head_data.get('TDS_Amt', 0) or 0)
-        Other_Amt = float(head_data.get('OTHER_Amt',0) or 0)
-    
+        Other_Amt = float(head_data.get('OTHER_Amt', 0) or 0)
 
         company_parameters = fetch_company_parameters(head_data['Company_Code'], head_data['Year_Code'])
 
@@ -419,54 +549,52 @@ def update_sugarsalereturn():
 
         if igst_amount > 0:
             ac_code = company_parameters.IGSTAc
-            accoid = get_accoid(company_parameters.IGSTAc,head_data['Company_Code'])
+            accoid = get_accoid(company_parameters.IGSTAc, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, igst_amount, "C", ac_code, accoid)
 
         if cgst_amount > 0:
             ac_code = company_parameters.CGSTAc
-            accoid = get_accoid(company_parameters.CGSTAc,head_data['Company_Code'])
+            accoid = get_accoid(company_parameters.CGSTAc, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, cgst_amount, "C", ac_code, accoid)
 
         if sgst_amount > 0:
             ac_code = company_parameters.SGSTAc
-            accoid = get_accoid(company_parameters.SGSTAc,head_data['Company_Code'])
+            accoid = get_accoid(company_parameters.SGSTAc, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, sgst_amount, "C", ac_code, accoid)
-        
+
         if TCS_Amt > 0:
             ac_code = head_data['FromAc']
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
+            accoid = get_accoid(ac_code, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, TCS_Amt, 'C', ac_code, accoid)
             ac_code = company_parameters.SaleTCSAc
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
+            accoid = get_accoid(ac_code, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, TCS_Amt, 'D', ac_code, accoid)
 
         if TDS_Amt > 0:
             ac_code = head_data['FromAc']
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
+            accoid = get_accoid(ac_code, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, TDS_Amt, 'D', ac_code, accoid)
             ac_code = company_parameters.SaleTDSAc
-            accoid = get_accoid(ac_code,head_data['Company_Code'])
+            accoid = get_accoid(ac_code, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, TDS_Amt, 'C', ac_code, accoid)
 
         if Other_Amt > 0:
-            ac_code = company_parameters.OtherAmountAc
+            ac_code = company_parameters.OTHER_AMOUNT_AC
             accoid = get_accoid(ac_code, head_data['Company_Code'])
             add_gledger_entry(gledger_entries, head_data, Other_Amt, 'C', ac_code, accoid)
         else:
-            add_gledger_entry(gledger_entries, head_data, Other_Amt, 'D', ac_code, accoid) 
+            add_gledger_entry(gledger_entries, head_data, Other_Amt, 'D', ac_code, accoid)
 
-
-
-        add_gledger_entry(gledger_entries, head_data, bill_amount, "D", head_data['FromAc'], get_accoid(head_data['FromAc'],head_data['Company_Code']))
+        add_gledger_entry(gledger_entries, head_data, bill_amount, "D", head_data['FromAc'], get_accoid(head_data['FromAc'], head_data['Company_Code']))
 
         for item in detail_data:
             Item_amount = float(item.get('item_Amount', 0) or 0)
-            ic = item.get('ic')
+            ic = item['ic']
 
-            if Item_amount>0:
+            if Item_amount > 0:
                 ac_code = getSaleAc(ic)
-                add_gledger_entry(gledger_entries, head_data, Item_amount, 'C', ac_code, get_accoid(ac_code,head_data['Company_Code'])) 
-                
+                add_gledger_entry(gledger_entries, head_data, Item_amount, 'C', ac_code, get_accoid(ac_code, head_data['Company_Code']))
+
         query_params = {
             'Company_Code': head_data['Company_Code'],
             'DOC_NO': updated_head.doc_no,
@@ -484,7 +612,7 @@ def update_sugarsalereturn():
 
         return jsonify({
             "message": "Data updated successfully",
-            "head": updated_head_count,
+            "head": sugar_sale_return_head_schema.dump(updated_head),
             "created_details": sugar_sale_return_detail_schemas.dump(created_details),
             "updated_details": updated_details,
             "deleted_detail_ids": deleted_detail_ids
@@ -492,44 +620,36 @@ def update_sugarsalereturn():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
 
-# Delete record from database based on srid
-@app.route(API_URL + "/delete_data_by_srid", methods=["DELETE"])
-def delete_data_by_srid():
+@app.route(API_URL + "/delete-sugarsalereturn", methods=["DELETE"])
+def delete_sugarsalereturn():
     try:
         srid = request.args.get('srid')
-        Company_Code = request.args.get('Company_Code')
+        tran_type = request.args.get('tran_type')
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
         doc_no = request.args.get('doc_no')
-        Year_Code = request.args.get('Year_Code')
-        tran_type = request.args.get('Tran_Type')
 
-        # Check if the required parameters are provided
-        if not all([srid, Company_Code, doc_no, Year_Code, tran_type]):
+        if not all([srid, tran_type, company_code, year_code, doc_no]):
             return jsonify({"error": "Missing required parameters"}), 400
-        
 
-        # Start a transaction
         with db.session.begin():
-            # Delete records from SugarSaleReturnDetail table
             deleted_detail_rows = SugarSaleReturnSaleDetail.query.filter_by(srid=srid).delete()
-
-            # Delete record from SugarSaleReturnHead table
             deleted_head_rows = SugarSaleReturnSaleHead.query.filter_by(srid=srid).delete()
 
         if deleted_detail_rows > 0 and deleted_head_rows > 0:
             query_params = {
-                'Company_Code': Company_Code,
+                'Company_Code': company_code,
                 'DOC_NO': doc_no,
-                'Year_Code': Year_Code,
+                'Year_Code': year_code,
                 'TRAN_TYPE': tran_type,
             }
 
-            # Make the external request
             response = requests.delete("http://localhost:8080/api/sugarian/delete-Record-gLedger", params=query_params)
             
             if response.status_code != 200:
-                raise Exception("Failed to create record in gLedger")
+                raise Exception("Failed to delete record in gLedger")
 
         db.session.commit()
 
@@ -538,223 +658,5 @@ def delete_data_by_srid():
         }), 200
 
     except Exception as e:
-        # Roll back the transaction if any error occurs
         db.session.rollback()
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
-
-# Fetch the last record from the database by srid
-@app.route(API_URL + "/get-last-sugarsalereturn", methods=["GET"])
-def get_last_sugarsalereturn():
-    try:
-        company_code = request.args.get('Company_Code')
-        year_code = request.args.get('Year_Code')
-        if not all([company_code, year_code]):
-            return jsonify({"error": "Missing required parameters"}), 400
-
-        last_sugar_sale_return_head = SugarSaleReturnSaleHead.query.order_by(SugarSaleReturnSaleHead.srid.desc()).filter_by(Company_Code=company_code,Year_Code = year_code).first()
-        if not last_sugar_sale_return_head:
-            return jsonify({"error": "No records found in SugarSaleReturnHead table"}), 404
-
-        srid = last_sugar_sale_return_head.srid
-        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": srid})
-        additional_data_rows = additional_data.fetchall()
-
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        unitName = row.unitname if row else None
-        brokerName = row.brokername if row else None
-        itemName = row.itemname if row else None
-        gstrateName = row.gstrate if row else None
-        transportName = row.transportname if row else None
-        billtoName = row.billtoname if row else None
-        fromacName = row.fromacname if row else None
-
-        last_head_data = {
-            **{column.name: getattr(last_sugar_sale_return_head, column.name) for column in last_sugar_sale_return_head.__table__.columns},
-            **format_dates(last_sugar_sale_return_head),
-            "partyName":partyName,
-            "millName":millName,
-            "unitName":unitName,
-            "brokerName":brokerName,
-            "itemName":itemName,
-            "gstrateName":gstrateName,
-            "transportName":transportName,
-            "billtoName":billtoName,
-            "fromacName":fromacName
-        }
-
-        last_details_data = [{"doc_no": row.doc_no, "detail_id": row.detail_id, "Tran_Type": row.Tran_Type, "item_code": row.item_code, "narration": row.narration, "Quantal": row.Quantal, "packing": row.packing, "bags": row.bags, "rate": row.rate, "item_Amount": row.item_Amount, "Company_Code": row.Company_Code, "Year_Code": row.Year_Code, "Branch_Code": row.Branch_Code, "Created_By": row.Created_By, "Modified_By": row.Modified_By, "srid": row.srid, "srdtid": row.srdtid, "ic": row.ic} for row in additional_data_rows]
-
-        response = {
-            "last_head_data": last_head_data,
-            "last_details_data": last_details_data
-        }
-
-        return jsonify(response), 200
-    except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
-
-# Get first record from the database
-@app.route(API_URL + "/get-first-sugarsalereturn", methods=["GET"])
-def get_first_sugarsalereturn():
-    try:
-        company_code = request.args.get('Company_Code')
-        year_code = request.args.get('Year_Code')
-        if not all([company_code, year_code]):
-            return jsonify({"error": "Missing required parameters"}), 400
-
-        first_sugar_sale_return_head = SugarSaleReturnSaleHead.query.order_by(SugarSaleReturnSaleHead.srid.asc()).filter_by(Company_Code=company_code,Year_Code=year_code).first()
-        if not first_sugar_sale_return_head:
-            return jsonify({"error": "No records found in SugarSaleReturnHead table"}), 404
-
-        srid = first_sugar_sale_return_head.srid
-        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": srid})
-        additional_data_rows = additional_data.fetchall()
-
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        unitName = row.unitname if row else None
-        brokerName = row.brokername if row else None
-        itemName = row.itemname if row else None
-        gstrateName = row.gstrate if row else None
-        transportName = row.transportname if row else None
-        billtoName = row.billtoname if row else None
-        fromacName = row.fromacname if row else None
-
-        first_head_data = {
-            **{column.name: getattr(first_sugar_sale_return_head, column.name) for column in first_sugar_sale_return_head.__table__.columns},
-            **format_dates(first_sugar_sale_return_head),
-            "partyName":partyName,
-            "millName":millName,
-            "unitName":unitName,
-            "brokerName":brokerName,
-            "itemName":itemName,
-            "gstrateName":gstrateName,
-            "transportName":transportName,
-            "billtoName":billtoName,
-            "fromacName":fromacName
-        }
-
-        first_details_data = [{"doc_no": row.doc_no, "detail_id": row.detail_id, "Tran_Type": row.Tran_Type, "item_code": row.item_code, "narration": row.narration, "Quantal": row.Quantal, "packing": row.packing, "bags": row.bags, "rate": row.rate, "item_Amount": row.item_Amount, "Company_Code": row.Company_Code, "Year_Code": row.Year_Code, "Branch_Code": row.Branch_Code, "Created_By": row.Created_By, "Modified_By": row.Modified_By, "srid": row.srid, "srdtid": row.srdtid, "ic": row.ic} for row in additional_data_rows]
-
-        response = {
-            "first_head_data": first_head_data,
-            "first_details_data": first_details_data
-        }
-
-        return jsonify(response), 200
-
-    except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
-
-# Get previous record from the database
-@app.route(API_URL + "/get-previous-sugarsalereturn", methods=["GET"])
-def get_previous_sugarsalereturn():
-    try:
-        current_doc_no = request.args.get('currentDocNo')
-        company_code = request.args.get('Company_Code')
-        year_code = request.args.get('Year_Code')
-        if not all([company_code, year_code, current_doc_no]):
-            return jsonify({"error": "Missing required parameters"}), 400
-
-        previous_sugar_sale_return_head = SugarSaleReturnSaleHead.query.filter(SugarSaleReturnSaleHead.doc_no < current_doc_no).filter_by(Company_Code=company_code,Year_Code = year_code).order_by(SugarSaleReturnSaleHead.doc_no.desc()).first()
-        if not previous_sugar_sale_return_head:
-            return jsonify({"error": "No previous records found"}), 404
-
-        srid = previous_sugar_sale_return_head.srid
-        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": srid})
-        additional_data_rows = additional_data.fetchall()
-
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        unitName = row.unitname if row else None
-        brokerName = row.brokername if row else None
-        itemName = row.itemname if row else None
-        gstrateName = row.gstrate if row else None
-        transportName = row.transportname if row else None
-        billtoName = row.billtoname if row else None
-        fromacName = row.fromacname if row else None
-
-        previous_head_data = {
-            **{column.name: getattr(previous_sugar_sale_return_head, column.name) for column in previous_sugar_sale_return_head.__table__.columns},
-            **format_dates(previous_sugar_sale_return_head),
-            "partyName":partyName,
-            "millName":millName,
-            "unitName":unitName,
-            "brokerName":brokerName,
-            "itemName":itemName,
-            "gstrateName":gstrateName,
-            "transportName":transportName,
-            "billtoName":billtoName,
-            "fromacName":fromacName
-        }
-
-        previous_details_data = [{"doc_no": row.doc_no, "detail_id": row.detail_id, "Tran_Type": row.Tran_Type, "item_code": row.item_code, "narration": row.narration, "Quantal": row.Quantal, "packing": row.packing, "bags": row.bags, "rate": row.rate, "item_Amount": row.item_Amount, "Company_Code": row.Company_Code, "Year_Code": row.Year_Code, "Branch_Code": row.Branch_Code, "Created_By": row.Created_By, "Modified_By": row.Modified_By, "srid": row.srid, "srdtid": row.srdtid, "ic": row.ic} for row in additional_data_rows]
-
-        response = {
-            "previous_head_data": previous_head_data,
-            "previous_details_data": previous_details_data
-        }
-
-        return jsonify(response), 200
-
-    except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
-
-# Get next record from the database
-@app.route(API_URL + "/get-next-sugarsalereturn", methods=["GET"])
-def get_next_sugarsalereturn():
-    try:
-        current_doc_no = request.args.get('currentDocNo')
-        company_code = request.args.get('Company_Code')
-        year_code = request.args.get('Year_Code')
-        if not all([company_code, year_code, current_doc_no]):
-            return jsonify({"error": "Missing required parameters"}), 400
-
-        next_sugar_sale_return_head = SugarSaleReturnSaleHead.query.filter(SugarSaleReturnSaleHead.doc_no > current_doc_no).filter_by(Company_Code=company_code, Year_Code = year_code).order_by(SugarSaleReturnSaleHead.doc_no.asc()).first()
-        if not next_sugar_sale_return_head:
-            return jsonify({"error": "No next records found"}), 404
-
-        srid = next_sugar_sale_return_head.srid
-        additional_data = db.session.execute(text(SUGAR_SALE_RETURN_DETAILS_QUERY), {"srid": srid})
-        additional_data_rows = additional_data.fetchall()
-
-        row = additional_data_rows[0] if additional_data_rows else None
-        partyName = row.partyname if row else None
-        millName = row.millname if row else None
-        unitName = row.unitname if row else None
-        brokerName = row.brokername if row else None
-        itemName = row.itemname if row else None
-        gstrateName = row.gstrate if row else None
-        transportName = row.transportname if row else None
-        billtoName = row.billtoname if row else None
-        fromacName = row.fromacname if row else None
-
-        next_head_data = {
-            **{column.name: getattr(next_sugar_sale_return_head, column.name) for column in next_sugar_sale_return_head.__table__.columns},
-            **format_dates(next_sugar_sale_return_head),
-            "partyName":partyName,
-            "millName":millName,
-            "unitName":unitName,
-            "brokerName":brokerName,
-            "itemName":itemName,
-            "gstrateName":gstrateName,
-            "transportName":transportName,
-            "billtoName":billtoName,
-            "fromacName":fromacName
-        }
-
-        next_details_data = [{"doc_no": row.doc_no, "detail_id": row.detail_id, "Tran_Type": row.Tran_Type, "item_code": row.item_code, "narration": row.narration, "Quantal": row.Quantal, "packing": row.packing, "bags": row.bags, "rate": row.rate, "item_Amount": row.item_Amount, "Company_Code": row.Company_Code, "Year_Code": row.Year_Code, "Branch_Code": row.Branch_Code, "Created_By": row.Created_By, "Modified_By": row.Modified_By, "srid": row.srid, "srdtid": row.srdtid, "ic": row.ic} for row in additional_data_rows]
-
-        response = {
-            "next_head_data": next_head_data,
-            "next_details_data": next_details_data
-        }
-
-        return jsonify(response), 200
-
-    except Exception as e:
-        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+        return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500

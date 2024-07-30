@@ -1,18 +1,32 @@
-from flask import jsonify
+import os
+from flask import jsonify, request
 from app import app, db 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 
-@app.route('/group_master', methods=['GET'])
+API_URL = os.getenv('API_URL')
+
+
+@app.route(API_URL+'/group_master', methods=['GET'])
 def group_master():
     try:
+        Company_Code = request.args.get('Company_Code')
+        if Company_Code is None:
+            return jsonify({'error': 'Missing Company_Code parameter'}), 400
+
+        try:
+            Company_Code = int(Company_Code)
+        except ValueError:
+            return jsonify({'error': 'Invalid Company_Code parameter'}), 400
+
+        
         # Start a database transaction
         with db.session.begin_nested():
             query = db.session.execute(text('''
-               SELECT group_Code, group_Name_E, group_Name_R, bsid
-               FROM nt_1_bsgroupmaster
-               ORDER BY group_Name_E
-            '''))
+            SELECT group_Code, group_Name_E,  bsid
+            FROM nt_1_bsgroupmaster
+            WHERE Company_Code=:company_code
+            '''), {'company_code': Company_Code})
 
             result = query.fetchall()
 
@@ -21,7 +35,6 @@ def group_master():
             response.append({
                 'group_Code': row.group_Code,
                 'group_Name_E': row.group_Name_E,
-                'group_Name_R': row.group_Name_R,
                 'bsid': row.bsid
             })
 
