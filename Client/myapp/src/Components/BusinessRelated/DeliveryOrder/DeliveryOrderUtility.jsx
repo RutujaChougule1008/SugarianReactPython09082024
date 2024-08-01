@@ -39,9 +39,9 @@ function DeliveryOredrUtility() {
         const fetchData = async () => {
 
             try {
-                const apiUrl = `${API_URL}/deliveryorder-all?Company_Code=${companyCode}&Year_Code=${Year_Code}`;
+                const apiUrl = `${API_URL}/getdata-DO?Company_Code=${companyCode}&Year_Code=${Year_Code}`;
                 const response = await axios.get(apiUrl);
-                setFetchedData(response.data);
+                setFetchedData(response.data.all_data);
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -123,13 +123,13 @@ function DeliveryOredrUtility() {
     };
 
     const handleClick = () => {
-        navigate("/financial-groups");
+        navigate("/delivery-order");
     };
 
     const handleRowClick = (doid) => {
         const selectedRecord = filteredData.find(record => record.doid === doid);
         console.log("selectedRecord", selectedRecord)
-        navigate("/financial-groups", { state: { selectedRecord } });
+        navigate("/delivery-order", { state: { selectedRecord } });
     };
 
     const handleSearchClick = () => {
@@ -177,20 +177,23 @@ function DeliveryOredrUtility() {
                                         <TableCell>Doc No</TableCell>
                                         <TableCell>Doc Date</TableCell>
                                         <TableCell>Purc No</TableCell>
-                                        <TableCell>Bill To</TableCell>
+                                        <TableCell>Tender Detail Id</TableCell>
+                                        <TableCell>Mill Name</TableCell>
+                                        <TableCell>Quintal</TableCell>
                                         <TableCell>Sale Bill To</TableCell>
+                                        <TableCell>SB City</TableCell>
+                                        <TableCell>Ship To Name</TableCell>
                                         <TableCell>Ship To City</TableCell>
                                         <TableCell>Sale Rate</TableCell>
                                         <TableCell>Tender Commission</TableCell>
-                                        <TableCell>Desp Type</TableCell>
+                                        <TableCell>Tran Type</TableCell>
                                         <TableCell>Truck No</TableCell>
                                         <TableCell>SB No</TableCell>
                                         <TableCell>EWay Bill No</TableCell>
                                         <TableCell>Delivery Type</TableCell>
-                                        <TableCell>Ship To Name</TableCell>
+                                        <TableCell>Transport Name</TableCell>
                                         <TableCell>Mill Rate</TableCell>
-                                        <TableCell>MM Rate</TableCell>
-                                        <TableCell>Vasuli Rate</TableCell>
+                                        <TableCell>Memo Advance Rate</TableCell>
                                         <TableCell>Doid</TableCell>
 
                                     </TableRow>
@@ -206,20 +209,22 @@ function DeliveryOredrUtility() {
                                             <TableCell>{post.doc_no}</TableCell>
                                             <TableCell>{post.doc_date}</TableCell>
                                             <TableCell>{post.purc_no}</TableCell>
-                                            <TableCell>{post.billtoshortname}</TableCell>
-                                            <TableCell>{post.salebillcityname}</TableCell>
-                                            <TableCell>{post.shiptocityname}</TableCell>
+                                            <TableCell>{post.tenderdetailid}</TableCell>
+                                            <TableCell>{post.millName}</TableCell>
+                                            <TableCell>{post.quantal}</TableCell>
+                                            <TableCell>{post.saleBillName}</TableCell>
+                                            <TableCell>{post.sbCityName}</TableCell>
+                                            <TableCell>{post.shipToName}</TableCell>
+                                            <TableCell>{post.shipToCityName}</TableCell>
                                             <TableCell>{post.sale_rate}</TableCell>
                                             <TableCell>{post.Tender_Commission}</TableCell>
-                                            <TableCell>{post.desp_type}</TableCell>
+                                            <TableCell>{post.tran_type}</TableCell>
                                             <TableCell>{post.truck_no}</TableCell>
                                             <TableCell>{post.SB_No}</TableCell>
                                             <TableCell>{post.EWay_Bill_No}</TableCell>
                                             <TableCell>{post.Delivery_Type}</TableCell>
-                                            <TableCell>{post.shiptoshortname}</TableCell>
-                                            <TableCell>{post.mill_rate}</TableCell>
+                                            <TableCell>{post.transportName}</TableCell>
                                             <TableCell>{post.MM_Rate}</TableCell>
-                                            <TableCell>{post.vasuli_rate1}</TableCell>
                                             <TableCell>{post.doid}</TableCell>
                                         </TableRow>
                                     ))}

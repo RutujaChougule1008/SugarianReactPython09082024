@@ -43,6 +43,7 @@ import AccountMaster from './Master/AccountInformation/AccountMaster/AccountMast
 import AccountMasterUtility from './Master/AccountInformation/AccountMaster/AccountMasterUtility';
 import EBuySugarianUserUtility from './EBuySugarian/EBuySugarinUser/EBuySugarianUserUtility';
 import EBuySugarAccountMasterUtility from './EBuySugarian/EBuySugarinUser/EBuySugarAccountMasterUtility';
+import DeliveryOredrUtility from './BusinessRelated/DeliveryOrder/DeliveryOrderUtility';
 
 const routes = [
   {
@@ -234,6 +235,17 @@ const routes = [
   path: '/AccountMaster-utility',
   element: AccountMasterUtility
 },
+//Delivery Order
+{
+  path: '/delivery-order',
+  element: DeliveryOrder
+},
+{
+  path: '/delivery-order-utility',
+  element: DeliveryOredrUtility
+},
+
+
 
 
 //eBuySugar

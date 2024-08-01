@@ -1,4 +1,5 @@
 # project_folder/app/routes/tender_routes.py
+import datetime
 from flask import Flask, jsonify, request
 from app import app, db
 from app.models.BusinessReleted.TenderPurchase.TenderPurchaseModels import TenderHead, TenderDetails 
@@ -549,6 +550,62 @@ def add_detail_to_tender():
             "message": "Detail entry added successfully",
             "detail": tender_detail_schema.dump(new_detail)
         }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    
+@app.route(API_URL + "/Stock_Entry_tender_purchase", methods=["PUT"])
+def Stock_Entry_tender_purchase():
+    try:
+        tenderid = request.args.get('tenderid')
+        tender_no = request.args.get('Tender_No')
+        if not tenderid:
+            return jsonify({"error": "Missing 'tenderid' parameter"}), 400
+        
+        data = request.get_json()
+        detailData = data['detailData']
+        createdDetails, updatedDetails, deletedDetailIds = [], [], []
+
+        for item in detailData:
+            try:
+                # Parse dates
+                if 'Sauda_Date' in item:
+                    item['Sauda_Date'] = datetime.strptime(item['Sauda_Date'], '%Y-%m-%d').date()
+                if 'Lifting_Date' in item:
+                    item['Lifting_Date'] = datetime.strptime(item['Lifting_Date'], '%Y-%m-%d').date()
+                
+                if item['rowaction'] == "add":
+                    del item['rowaction']
+                    item.update({'Tender_No': tender_no, 'tenderid': tenderid})
+                    if 'ID' not in item:
+                        item['ID'] = (db.session.query(db.func.max(TenderDetails.ID)).filter_by(tenderid=tenderid).scalar() or 0) + 1
+                    new_detail = TenderDetails(**item)
+                    db.session.add(new_detail)
+                    db.session.flush()  # Allocates an ID
+                    createdDetails.append(new_detail)
+
+                elif item['rowaction'] == "update":
+                    del item['rowaction']
+                    db.session.query(TenderDetails).filter_by(tenderdetailid=item['tenderdetailid']).update({k: v for k, v in item.items() if k != 'tenderdetailid'})
+                    updatedDetails.append(item['tenderdetailid'])
+
+                elif item['rowaction'] == "delete":
+                    detail_to_delete = db.session.query(TenderDetails).filter_by(tenderdetailid=item['tenderdetailid']).one()
+                    db.session.delete(detail_to_delete)
+                    deletedDetailIds.append(item['tenderdetailid'])
+
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"error": "Error processing item", "message": str(e)}), 500
+
+        db.session.commit()
+        return jsonify({
+            "Message": "Data Inserted Successfully...",
+            "addedDetails": tender_detail_schemas.dump(createdDetails),
+            "updatedDetails": updatedDetails,
+            "deletedDetails": deletedDetailIds
+        })
 
     except Exception as e:
         db.session.rollback()

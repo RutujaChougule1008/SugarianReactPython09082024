@@ -93,7 +93,15 @@ const CompanyList = () => {
       if (selectedAccountingYear) {
         sessionStorage.setItem('Year_Code', selectedAccountingYear.yearCode);
         sessionStorage.setItem('username', username);
+
+      
       }
+
+      const selfAcResponse = await axios.get(`http://localhost:8080/api/get_self_ac?Company_Code=${ selectedCompany.Company_Code}&Year_Code=${selectedAccountingYear.yearCode}`)
+      console.log("selfAcResponse",selfAcResponse)
+      sessionStorage.setItem('SELF_AC', selfAcResponse.data.SELF_AC);
+      sessionStorage.setItem('Self_acid', selfAcResponse.data.Self_acid);
+
       setIsLoggedIn(true);
       toast.success("Logged in successfully!");
       setTimeout(() => {

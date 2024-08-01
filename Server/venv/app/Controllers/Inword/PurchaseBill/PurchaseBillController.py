@@ -125,6 +125,7 @@ def getsugarpurchasebyid():
         print(e)
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
+
 ##Insert Operation with the Gledger Effcets
 @app.route(API_URL + "/insert_SugarPurchase", methods=["POST"])
 def insert_SugarPurchase():
@@ -132,8 +133,9 @@ def insert_SugarPurchase():
     trans_typeNew  = "PS"
     DRCRHead = "C"
     DRCRDetail ="D"
-   
-    def create_gledger_entry(data, amount, drcr, ac_code, accoid):
+    ac_code=0
+    ordercode=0
+    def create_gledger_entry(data, amount, drcr, ac_code, accoid,ordercode):
         return {
             "TRAN_TYPE": trans_typeNew,
             "DOC_NO": new_doc_no,
@@ -142,7 +144,7 @@ def insert_SugarPurchase():
             "AMOUNT": amount,
             "COMPANY_CODE": data['Company_Code'],
             "YEAR_CODE": data['Year_Code'],
-            "ORDER_CODE": 12,
+            "ORDER_CODE": ordercode,
             "DRCR": drcr,
             "UNIT_Code": 0,
             "NARRATION": "aaaa",
@@ -161,9 +163,9 @@ def insert_SugarPurchase():
             "ac": accoid
         }
 
-    def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid):
+    def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid,ordercode):
         if amount > 0:
-            entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid))
+            entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid,ordercode))
     try:
         data = request.get_json()
         headData = data['headData']
@@ -184,6 +186,7 @@ def insert_SugarPurchase():
         updatedDetails = []
         deletedDetailIds = []
 
+        print('newhead',new_head)
         for item in detailData:
             item['doc_no'] = new_doc_no
 
@@ -219,43 +222,51 @@ def insert_SugarPurchase():
         CGSTAmount = float(headData.get('CGSTAmount', 0) or 0)
         TCS_Amt = float(headData.get('TCS_Amt', 0) or 0)
         TDS_Amt = float(headData.get('TDS_Amt', 0) or 0)
+        ordercode=0
 
         company_parameters = fetch_company_parameters(headData['Company_Code'], headData['Year_Code'])
 
         gledger_entries = []
 
         if IGSTAmount > 0:
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseIGSTAc
             accoid = get_accoid(company_parameters.PurchaseIGSTAc,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, IGSTAmount,DRCRDetail , ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, IGSTAmount,DRCRDetail , ac_code, accoid,ordercode)
 
         if CGSTAmount > 0:
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseCGSTAc
             accoid = get_accoid(company_parameters.PurchaseCGSTAc,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, CGSTAmount, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, CGSTAmount, DRCRDetail, ac_code, accoid,ordercode)
 
         if SGSTAmount > 0:
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseSGSTAc
             accoid = get_accoid(company_parameters.PurchaseSGSTAc,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, SGSTAmount, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, SGSTAmount, DRCRDetail, ac_code, accoid,ordercode)
         
         if TCS_Amt > 0:
+            ordercode=ordercode+1 
             ac_code = headData['Ac_Code']
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TCS_Amt, DRCRHead, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, DRCRHead, ac_code, accoid,ordercode)
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseTCSAc
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TCS_Amt,DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt,DRCRDetail, ac_code, accoid,ordercode)
 
         if TDS_Amt > 0:
+            ordercode=ordercode+1 
             ac_code = headData['Ac_Code']
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRDetail, ac_code, accoid,ordercode)
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseTDSAc
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRHead, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRHead, ac_code, accoid,ordercode)
 
-        add_gledger_entry(gledger_entries, headData, bill_amount,DRCRHead, headData['Ac_Code'], get_accoid(headData['Ac_Code'],headData['Company_Code']))
+        add_gledger_entry(gledger_entries, headData, bill_amount,DRCRHead, headData['Ac_Code'], get_accoid(headData['Ac_Code'],headData['Company_Code']),ordercode)
     
         for item in detailData:
             ic_value = item['ic']
@@ -264,11 +275,11 @@ def insert_SugarPurchase():
             detailLedger_entry = create_gledger_entry({
                 "tran_type": trans_typeNew,
                 "doc_date": headData['doc_date'],
-                "Ac_Code": purchase_ac_code,
+                "ac_code": purchase_ac_code,
                 "Company_Code": headData['Company_Code'],
                 "Year_Code": headData['Year_Code'],
                 "Narration": "aaaa",
-            }, float(item['item_Amount']), DRCRDetail, purchase_ac_code, get_accoid(purchase_ac_code,headData['Company_Code']))
+            }, float(item['item_Amount']), DRCRDetail, ac_code, get_accoid(ac_code,headData['Company_Code']),ordercode)
             gledger_entries.append(detailLedger_entry)
 
         query_params = {
@@ -278,6 +289,7 @@ def insert_SugarPurchase():
             'TRAN_TYPE': trans_typeNew,
         }
 
+        print('gledger_entries',gledger_entries)
         response = requests.post("http://localhost:8080/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
 
         if response.status_code == 201:
@@ -301,14 +313,17 @@ def insert_SugarPurchase():
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 
+
+#Update record operation with the Gledger Effects
 #Update record operation with the Gledger Effects
 @app.route(API_URL + "/update-SugarPurchase", methods=["PUT"])
 def update_SugarPurchase():
     trans_typeNew = "PS"
     DRCRHead = "C"
     DRCRDetail = "D"
-    
-    def create_gledger_entry(data, amount, drcr, ac_code, accoid):
+    ac_code=0
+    ordercode=0
+    def create_gledger_entry(data, amount, drcr, ac_code, accoid,ordercode):
         return {
             "TRAN_TYPE": trans_typeNew,
             "DOC_NO": doc_no,
@@ -336,9 +351,9 @@ def update_SugarPurchase():
             "ac": accoid
         }
 
-    def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid):
-        if amount > 0:
-            entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid))
+    def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid,ordercode):
+        if amount != 0:
+            entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid,ordercode))
     try:
         purchaseid = request.args.get('purchaseid')
 
@@ -358,7 +373,7 @@ def update_SugarPurchase():
 
         updated_tender_head = db.session.query(SugarPurchase).filter(SugarPurchase.purchaseid == purchaseid).one()
         doc_no = updated_tender_head.doc_no
-
+        dono=headData['PURCNO']
         for item in detailData:
             if item['rowaction'] == "add":
                 item['doc_no'] = doc_no
@@ -371,10 +386,16 @@ def update_SugarPurchase():
             elif item['rowaction'] == "update":
                 item['doc_no'] = doc_no
                 item['purchaseid'] = purchaseid
-                purchasedetailid = item['purchasedetailid']
-                update_values = {k: v for k, v in item.items() if k not in ('purchasedetailid', 'purchaseid', 'rowaction')}
-                db.session.query(SugarPurchaseDetail).filter(SugarPurchaseDetail.purchasedetailid == purchasedetailid).update(update_values)
-                updatedDetails.append(purchasedetailid)
+                if dono=="" and dono==0:
+                    purchasedetailid = item['purchasedetailid']
+                    update_values = {k: v for k, v in item.items() if k not in ('purchasedetailid', 'purchaseid', 'rowaction')}
+                    db.session.query(SugarPurchaseDetail).filter(SugarPurchaseDetail.purchasedetailid == purchasedetailid).update(update_values)
+                    updatedDetails.append(purchasedetailid)
+                else:
+                    purchasedetailid = item['purchasedetailid']
+                    update_values = {k: v for k, v in item.items() if k not in ('purchasedetailid', 'purchaseid', 'rowaction')}
+                    db.session.query(SugarPurchaseDetail).filter(SugarPurchaseDetail.purchaseid == purchaseid).update(update_values)
+                    updatedDetails.append(purchasedetailid)   
 
             elif item['rowaction'] == "delete":
                 purchasedetailid = item['purchasedetailid']
@@ -391,42 +412,50 @@ def update_SugarPurchase():
         CGSTAmount = float(headData.get('CGSTAmount', 0) or 0)
         TCS_Amt = float(headData.get('TCS_Amt', 0) or 0)
         TDS_Amt = float(headData.get('TDS_Amt', 0) or 0)
+        ordercode=0
 
         company_parameters = fetch_company_parameters(headData['Company_Code'], headData['Year_Code'])
         gledger_entries = []
 
         if IGSTAmount > 0:
+            ordercode=ordercode+1
             ac_code = company_parameters.PurchaseIGSTAc
             accoid = get_accoid(company_parameters.PurchaseIGSTAc, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, IGSTAmount, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, IGSTAmount, DRCRDetail, ac_code, accoid,ordercode)
 
         if CGSTAmount > 0:
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseCGSTAc
             accoid = get_accoid(company_parameters.PurchaseCGSTAc, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, CGSTAmount, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, CGSTAmount, DRCRDetail, ac_code, accoid,ordercode)
 
         if SGSTAmount > 0:
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseSGSTAc
             accoid = get_accoid(company_parameters.PurchaseSGSTAc, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, SGSTAmount, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, SGSTAmount, DRCRDetail, ac_code, accoid,ordercode)
 
         if TCS_Amt > 0:
+            ordercode=ordercode+1
             ac_code = headData['Ac_Code']
             accoid = get_accoid(ac_code, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TCS_Amt, DRCRHead, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, DRCRHead, ac_code, accoid,ordercode)
+            ordercode=ordercode+1 
             ac_code = company_parameters.PurchaseTCSAc
             accoid = get_accoid(ac_code, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TCS_Amt, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, DRCRDetail, ac_code, accoid,ordercode)
 
         if TDS_Amt > 0:
+            ordercode=ordercode+1
             ac_code = headData['Ac_Code']
             accoid = get_accoid(ac_code, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRDetail, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRDetail, ac_code, accoid,ordercode)
+            ordercode=ordercode+1
             ac_code = company_parameters.PurchaseTDSAc
             accoid = get_accoid(ac_code, headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRHead, ac_code, accoid)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, DRCRHead, ac_code, accoid,ordercode)
 
-        add_gledger_entry(gledger_entries, headData, bill_amount, DRCRHead, headData['Ac_Code'], get_accoid(headData['Ac_Code'], headData['Company_Code']))
+        add_gledger_entry(gledger_entries, headData, bill_amount, DRCRHead, headData['Ac_Code'], get_accoid(headData['Ac_Code'], headData['Company_Code']),ordercode)
 
         for item in detailData:
             ic_value = item['ic']
@@ -435,11 +464,11 @@ def update_SugarPurchase():
             detailLedger_entry = create_gledger_entry({
                 "tran_type": trans_typeNew,
                 "doc_date": headData['doc_date'],
-                "Ac_Code": purchase_ac_code,
+                "ac_code": purchase_ac_code,
                 "Company_Code": headData['Company_Code'],
                 "Year_Code": headData['Year_Code'],
                 "Narration": "aaaa",
-            }, float(item['item_Amount']), DRCRDetail, purchase_ac_code, get_accoid(purchase_ac_code,headData['Company_Code']))
+            }, float(item['item_Amount']), DRCRDetail, ac_code, get_accoid(ac_code,headData['Company_Code']),ordercode)
             gledger_entries.append(detailLedger_entry)
 
         query_params = {
@@ -458,7 +487,7 @@ def update_SugarPurchase():
             return jsonify({"error": "Failed to create gLedger record", "details": response.json()}), response.status_code
 
         serialized_created_details = createdDetails
-
+       
         return jsonify({
             "message": "Data updated successfully",
             "updatedHeadCount": updatedHeadCount,
@@ -470,6 +499,7 @@ def update_SugarPurchase():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
 
 #Delete record from Operation and also delet the Gledger Effect.  
 @app.route(API_URL + "/delete_data_SugarPurchase", methods=["DELETE"])

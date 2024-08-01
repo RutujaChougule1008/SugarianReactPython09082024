@@ -186,10 +186,17 @@ def insert_SaleBill():
         headData = data['headData']
         detailData = data['detailData']
 
-        max_doc_no = get_max_doc_no()
-        new_doc_no = max_doc_no + 1
-        print("New Document Number:", new_doc_no)
-        headData['doc_no'] = new_doc_no
+        dono=headData['DO_No']
+        print('dono',dono)
+        if  dono!=0:
+            new_doc_no=0
+            headData['doc_no'] = 0
+        else :
+            max_doc_no = get_max_doc_no()
+            new_doc_no = max_doc_no + 1
+            print("New Document Number:", new_doc_no)
+            headData['doc_no'] = new_doc_no
+
 
         new_head = SaleBillHead(**headData)
         db.session.add(new_head)
@@ -360,10 +367,13 @@ def insert_SaleBill():
 
 
 #Update Record and Gldger Effects of SaleBill and SaleBill
+#Update Record and Gldger Effects of SaleBill and SaleBill
 @app.route(API_URL + "/update-SaleBill", methods=["PUT"])
 def update_SaleBill():
+    def get_max_doc_no():
+        return db.session.query(func.max(SaleBillHead.doc_no)).scalar() or 0
 
-    def create_gledger_entry(data, amount, drcr, ac_code, accoid,narration):
+    def create_gledger_entry(data, amount, drcr, ac_code, accoid,narration,ordercode):
         return {
             "TRAN_TYPE": 'SB',
             "DOC_NO": updateddoc_no,
@@ -372,7 +382,7 @@ def update_SaleBill():
             "AMOUNT": amount,
             "COMPANY_CODE": data['Company_Code'],
             "YEAR_CODE": data['Year_Code'],
-            "ORDER_CODE": 12,
+            "ORDER_CODE": ordercode,
             "DRCR": drcr,
             "UNIT_Code": 0,
             "NARRATION": narration,
@@ -391,20 +401,33 @@ def update_SaleBill():
             "ac": accoid
         }
 
-    def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid,narration):
+    def add_gledger_entry(entries, data, amount, drcr, ac_code, accoid,narration,ordercode):
         if amount > 0:
-            entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid,narration))
+            entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid,narration,ordercode))
             
     try:
+        data = request.get_json()
+        headData = data['headData']
+        detailData = data['detailData']
+        dono=headData['DO_No']
+        doc_no=headData['doc_no']
+        if dono!=0  :
+            if doc_no == 0 :
+                headData['doc_no'] = 0
+                updateddoc_no = 0
+        else:    
+            max_doc_no = get_max_doc_no()
+            updateddoc_no = max_doc_no + 1
+            print("New Document Number:", updateddoc_no)
+            headData['doc_no'] = updateddoc_no
+
         saleid = request.args.get('saleid')
         if saleid is None:
             return jsonify({"error": "Missing 'saleid' parameter"}), 400
         
-        data = request.get_json()
-        headData = data['headData']
-        detailData = data['detailData']
-
-        print(headData)
+        # data = request.get_json()
+        # headData = data['headData']
+        # detailData = data['detailData']
 
         tran_type = headData.get('Tran_Type')
         if tran_type is None:
@@ -420,7 +443,7 @@ def update_SaleBill():
         createdDetails = []
         updatedDetails = []
         deletedDetailIds = []
-
+        dono=headData['DO_No']
         for item in detailData:
             item['saleid'] = updated_debit_head.saleid
 
@@ -433,10 +456,16 @@ def update_SaleBill():
                     createdDetails.append(new_detail)
 
                 elif item['rowaction'] == "update":
-                    dcdetailid = item['saledetailid']
-                    update_values = {k: v for k, v in item.items() if k not in ('saledetailid', 'rowaction', 'saleid')}
-                    db.session.query(SaleBillDetail).filter(SaleBillDetail.saledetailid == dcdetailid).update(update_values)
-                    updatedDetails.append(dcdetailid)
+                    if dono=="" and dono==0:
+                        dcdetailid = item['saledetailid']                  
+                        update_values = {k: v for k, v in item.items() if k not in ('saledetailid', 'rowaction', 'saleid')}
+                        db.session.query(SaleBillDetail).filter(SaleBillDetail.saledetailid == dcdetailid).update(update_values)
+                        updatedDetails.append(dcdetailid)
+                    else:
+                        dcdetailid = item['saledetailid']                  
+                        update_values = {k: v for k, v in item.items() if k not in ('saledetailid', 'rowaction', 'saleid')}
+                        db.session.query(SaleBillDetail).filter(SaleBillDetail.saleid == saleid).update(update_values)
+                        updatedDetails.append(dcdetailid)   
 
                 elif item['rowaction'] == "delete":
                     dcdetailid = item['saledetailid']
@@ -457,8 +486,7 @@ def update_SaleBill():
         cash_advance= float(headData.get(' cash_advance', 0) or 0)
         RoundOff= float(headData.get(' RoundOff', 0) or 0)
 
-        sale_ac = getSaleAc(item.get('ic')) 
-        print('SaleAc',sale_ac)    
+        sale_ac = getSaleAc(item.get('ic'))     
         unitcode=headData['Unit_Code']
         accode=headData['Ac_Code']  
 
@@ -471,7 +499,6 @@ def update_SaleBill():
               ' SB: '+ get_acShort_Name(headData['Ac_Code'], headData['Company_Code']) 
 
         )
-        print(saleacnarration)
 
         Transportnarration=('Qntl: '+
         str(headData['NETQNTL']) + ''  + str(headData['cash_advance'])+
@@ -497,70 +524,81 @@ def update_SaleBill():
 
 
       
-    
+        ordercode=0
         if CGSTAmount > 0:
-              
+              ordercode=ordercode+1
               ac_code = company_parameters.CGSTAc
               accoid = get_accoid(ac_code,headData['Company_Code'])
-              add_gledger_entry(gledger_entries, headData, CGSTAmount, 'C', ac_code, accoid,creditnarration)
+              add_gledger_entry(gledger_entries, headData, CGSTAmount, 'C', ac_code, accoid,creditnarration,ordercode)
 
              
         if SGSTAmount > 0:
-                    
+                    ordercode=ordercode+1
                     ac_code = company_parameters.SGSTAc
                     accoid = get_accoid(ac_code,headData['Company_Code'])
-                    add_gledger_entry(gledger_entries, headData, SGSTAmount, 'C', ac_code, accoid,creditnarration)
+                    add_gledger_entry(gledger_entries, headData, SGSTAmount, 'C', ac_code, accoid,creditnarration,ordercode)
 
         if IGSTAmount > 0:
-              
+              ordercode=ordercode+1
               ac_code = company_parameters.IGSTAc
               accoid = get_accoid(ac_code,headData['Company_Code'])
-              add_gledger_entry(gledger_entries, headData, IGSTAmount, 'C', ac_code, accoid,creditnarration)
+              add_gledger_entry(gledger_entries, headData, IGSTAmount, 'C', ac_code, accoid,creditnarration,ordercode)
 
        
        
         if TCS_Amt > 0:
-            ac_code = headData['Ac_Code']
+            ordercode=ordercode+1
+            ac_code = headData['ac_code']
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TCS_Amt, 'D', ac_code, accoid,creditnarration)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, 'D', ac_code, accoid,creditnarration,ordercode)
+
+            ordercode=ordercode+1
             ac_code = company_parameters.SaleTCSAc
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TCS_Amt, 'C', ac_code, accoid,creditnarration)
+            add_gledger_entry(gledger_entries, headData, TCS_Amt, 'C', ac_code, accoid,creditnarration,ordercode)
 
         if TDS_Amt > 0:
-            ac_code = headData['Ac_Code']
+            ordercode=ordercode+1
+            ac_code = headData['ac_code']
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TDS_Amt, 'C', ac_code, accoid,creditnarration)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, 'C', ac_code, accoid,creditnarration,ordercode)
+
+            ordercode=ordercode+1
             ac_code = company_parameters.SaleTDSAc
             accoid = get_accoid(ac_code,headData['Company_Code'])
-            add_gledger_entry(gledger_entries, headData, TDS_Amt, 'D', ac_code, accoid,creditnarration)
+            add_gledger_entry(gledger_entries, headData, TDS_Amt, 'D', ac_code, accoid,creditnarration,ordercode)
 
         if Bill_Amount > 0:
+                    ordercode=ordercode+1
                     ac_code = headData['Ac_Code']
                     accoid = get_accoid(ac_code,headData['Company_Code'])
-                    add_gledger_entry(gledger_entries, headData, Bill_Amount, 'D', ac_code, accoid,creditnarration)
+                    add_gledger_entry(gledger_entries, headData, Bill_Amount, 'D', ac_code, accoid,creditnarration,ordercode)
+
+                    ordercode=ordercode+1
                    
                     ac_code = sale_ac
                     accoid = get_accoid(ac_code,headData['Company_Code'])
-                    add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,saleacnarration)
+                    add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,saleacnarration,ordercode)
                    
         if cash_advance>0 :
-             
+              ordercode=ordercode+1
               ac_code = headData['Transport_Code']
               accoid = get_accoid(ac_code,headData['Company_Code'])
-              add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,Transportnarration)
+              add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,Transportnarration,ordercode)
                    
 
         if RoundOff!=0 :
           if RoundOff>0:
+              ordercode=ordercode+1
               ac_code = headData['Transport_Code']
               accoid = get_accoid(ac_code,headData['Company_Code'])
-              add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,creditnarration)
+              add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,creditnarration,ordercode)
 
           elif RoundOff<0:
+             ordercode=ordercode+1
              ac_code = company_parameters.RoundOff
              accoid = get_accoid(company_parameters.RoundOff)
-             add_gledger_entry(gledger_entries, headData, Bill_Amount, 'D', ac_code, accoid,              add_gledger_entry(gledger_entries, headData, Bill_Amount, 'C', ac_code, accoid,creditnarration))
+             add_gledger_entry(gledger_entries, headData, Bill_Amount, 'D', ac_code, accoid,creditnarration,ordercode)
 
 
     
@@ -590,9 +628,10 @@ def update_SaleBill():
         }), 201
 
     except Exception as e:
-        traceback.print_exc()
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
+
 
 
 #Delete record from datatabse based Dcid and also delete that record GLeder Effects.  
