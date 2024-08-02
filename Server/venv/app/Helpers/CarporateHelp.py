@@ -104,6 +104,7 @@ def getCarporateData():
             '''),{'Company_Code':Company_Code, 'Doc_No':Carporate_no,
                   'selfac': selfac,'selfacname':selfacname,'selfacid':selfacid})
                 
+                print(query)
            
             result = query.fetchall()
 

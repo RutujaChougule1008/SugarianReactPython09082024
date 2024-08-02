@@ -786,7 +786,7 @@ const DeliveryOrder = () => {
 
   const handleTenderDetailsFetched = (details) => {
     console.log(details.last_details_data[0]);
-
+    debugger
     setTenderDetails(details.last_details_data[0]);
     let Carporate_Sale_No = formData.Carporate_Sale_No;
     let assingqntl = 0;
@@ -994,78 +994,120 @@ const DeliveryOrder = () => {
 
   //Creating Commison Bill entry
 
-  const CommisionBillCalculation = async (name, input, formData, gstRate) => {
-    // Clone formData and initialize additional fields
+  
+const CommisionBillCalculation = async (name, input, formData, gstRate) => {
+  // Clone formData and initialize additional fields
+  formData={
+      ...formData,
+      LV_CGSTAmount:0.00,
+      LV_SGSTAmount:0.00,
+      LV_IGSTAmount:0.00,
+      LV_TotalAmount:0.00,
+      LV_TCSRate:0.00,
+      LV_NETPayble:0.00,
+      LV_TCSAmt:0.00,
+      LV_TDSRate:0.00,
+      LV_TDSAmt:0.00,
+      LV_Igstrate:0.00,
+      LV_Cgstrate:0.00,
+      LV_taxableamount:0.00,
+      LV_Sgstrate:0.00,
+      LV_Commision_Amt:0.00,
+      LV_tender_Commision_Amt:0.00
 
-    let updatedFormData = { ...formData, [name]: input };
-
-    let GSTRate = gstRate;
-    let igstrate = (GSTRate / 2).toFixed(2);
-    let sgstrate = (GSTRate / 2).toFixed(2);
-    let cgstrate = (GSTRate / 2).toFixed(2);
-    let DIFF_AMOUNT = parseFloat(updatedFormData.DIFF_AMOUNT);
-    let MEMO_ADVANCE = parseFloat(updatedFormData.MEMO_ADVANCE);
-    let taxableamount = DIFF_AMOUNT + MEMO_ADVANCE;
-    let DiffMemo = DIFF_AMOUNT + MEMO_ADVANCE;
-    let salebillto = updatedFormData.SaleBillTo;
-    const matchStatus = await checkMatchStatus(
-      salebillto,
-      companyCode,
-      Year_Code
-    );
-    let LV_CGSTAmount = 0.0;
-    let LV_SGSTAmount = 0.0;
-    let LV_IGSTAmount = 0.0;
-    let LV_TotalAmount = 0.0;
-    let LV_TCSRate = 0.0;
-    let LV_NETPayble = 0.0;
-    let LV_TCSAmt = 0.0;
-    let LV_TDSRate = 0.0;
-    let LV_TDSAmt = 0.0;
-    if (DiffMemo != 0) {
-      if (matchStatus == "TRUE") {
-        LV_CGSTAmount = Math.round(
-          parseFloat(((DIFF_AMOUNT + MEMO_ADVANCE) * cgstrate) / 100)
-        );
-        LV_SGSTAmount = Math.round(
-          parseFloat(((DIFF_AMOUNT + MEMO_ADVANCE) * sgstrate) / 100)
-        );
-        // lvcgstrate = cgstrate;
-        // lvsgstrate = sgstrate;
-        // lvigstrate = 0.00;
-        igstrate = 0.0;
-        LV_IGSTAmount = 0;
-      } else {
-        LV_IGSTAmount = Math.round(
-          parseFloat(((DIFF_AMOUNT + MEMO_ADVANCE) * igstrate) / 100)
-        );
-        cgstrate = 0;
-        sgstrate = 0;
-
-        LV_SGSTAmount = 0.0;
-        LV_CGSTAmount = 0.0;
-      }
-    }
-
-    LV_TotalAmount = Math.round(
-      parseFloat(
-        DIFF_AMOUNT +
-          MEMO_ADVANCE +
-          LV_CGSTAmount +
-          LV_SGSTAmount +
-          LV_IGSTAmount
-      )
-    );
-    LV_TCSRate = parseFloat(updatedFormData.Sale_TCS_Rate) || 0;
-    // LV_TCSAmt = Math.Round(((Bill_Amt * TCS_Rate) / 100), 2);
-    LV_TCSAmt = Math.round(parseFloat((LV_TotalAmount * LV_TCSRate) / 100));
-    LV_NETPayble = Math.round(parseFloat(LV_TotalAmount + LV_TCSAmt));
-    LV_TDSRate = parseFloat(updatedFormData.SaleTDSRate) || 0.0;
-    LV_TDSAmt = parseFloat((LV_TotalAmount * LV_TDSRate) / 100);
-    LV_NETPayble = LV_NETPayble;
-
-    return updatedFormData;
   };
+  let updatedFormData = { ...formData, [name]: input };
+  
+  
+  let LV_tender_Commision_Amt=0.00
+  let GSTRate = gstRate
+  let igstrate = 0.00;
+  let sgstrate = 0.00;
+  let cgstrate = 0.00;
+  let DIFF_AMOUNT=parseFloat(updatedFormData.diff_amount) || 0.00;
+  let MEMO_ADVANCE=parseFloat(updatedFormData.Memo_Advance) || 0.00;
+  let taxableamount = parseFloat(DIFF_AMOUNT + MEMO_ADVANCE) || 0.00;
+  let DiffMemo = parseFloat(DIFF_AMOUNT + MEMO_ADVANCE) || 0.00;
+  let salebillto=updatedFormData.SaleBillTo;
+  const matchStatus = await checkMatchStatus(salebillto, companyCode, Year_Code);
+  let LV_CGSTAmount=0.00;
+  let LV_SGSTAmount=0.00;
+  let LV_IGSTAmount=0.00;
+  let LV_TotalAmount=0.00;
+  let LV_TCSRate=0.00;
+  let LV_NETPayble=0.00;
+  let LV_TCSAmt=0.00;
+  let LV_TDSRate=0.00;
+  let LV_TDSAmt=0.00;
+  if (DiffMemo != 0) {
+      
+      if (matchStatus == "TRUE") {
+          sgstrate = (GSTRate / 2).toFixed(2);
+          cgstrate = (GSTRate / 2).toFixed(2);
+          LV_CGSTAmount = Math.round(parseFloat(((DIFF_AMOUNT + MEMO_ADVANCE) * cgstrate) / 100));
+          LV_SGSTAmount = Math.round(parseFloat(((DIFF_AMOUNT + MEMO_ADVANCE) * sgstrate) / 100));
+          // lvcgstrate = cgstrate;
+          // lvsgstrate = sgstrate;
+          // lvigstrate = 0.00;
+          igstrate=0.00;
+          LV_IGSTAmount = 0;
+      }
+      else {
+          igstrate = GSTRate ;
+          LV_IGSTAmount = Math.round(parseFloat(((DIFF_AMOUNT + MEMO_ADVANCE) * igstrate) / 100));
+          cgstrate = 0;
+          sgstrate = 0;
+        
+          LV_SGSTAmount = 0.00;
+          LV_CGSTAmount = 0.00;
+      }
+
+  }
+  
+  
+
+  LV_TotalAmount = Math.round(parseFloat((DIFF_AMOUNT + MEMO_ADVANCE) + LV_CGSTAmount + LV_SGSTAmount + LV_IGSTAmount));
+  LV_TCSRate = parseFloat(updatedFormData.Sale_TCS_Rate)|| 0;
+  // LV_TCSAmt = Math.Round(((Bill_Amt * TCS_Rate) / 100), 2);
+  LV_TCSAmt = Math.round(parseFloat((LV_TotalAmount * LV_TCSRate) / 100));
+  LV_NETPayble = Math.round(parseFloat((LV_TotalAmount + LV_TCSAmt)));
+  LV_TDSRate = parseFloat(updatedFormData.SaleTDSRate)|| 0.00;
+  LV_TDSAmt = parseFloat((LV_TotalAmount * LV_TDSRate) / 100);
+  let LV_diff_rate=parseFloat(updatedFormData.diff_rate)|| 0.00;
+  let LV_Tender_Commission=parseFloat(updatedFormData.Tender_Commission)|| 0.00;
+
+  let LV_Commision_Amt=parseFloat(LV_diff_rate - LV_Tender_Commission)
+  LV_tender_Commision_Amt=parseFloat(LV_tender_Commision_Amt * parseFloat(updatedFormData.quantal)) || 0.00
+  LV_NETPayble = LV_NETPayble;
+
+  updatedFormData.LV_CGSTAmount=LV_CGSTAmount
+  updatedFormData.LV_SGSTAmount=LV_SGSTAmount
+  updatedFormData.LV_IGSTAmount=LV_IGSTAmount
+  updatedFormData.LV_TotalAmount=LV_TotalAmount
+  updatedFormData.LV_TCSRate=LV_TCSRate
+  updatedFormData.LV_NETPayble=LV_NETPayble
+  updatedFormData.LV_TCSAmt=LV_TCSAmt
+  updatedFormData.LV_TDSRate=LV_TDSRate
+  updatedFormData.LV_TDSAmt=LV_TDSAmt
+  updatedFormData.LV_Igstrate=igstrate
+  updatedFormData.LV_Cgstrate=cgstrate
+  updatedFormData.LV_Sgstrate=sgstrate
+  updatedFormData.LV_taxableamount=taxableamount
+  updatedFormData.LV_Commision_Amt=LV_Commision_Amt
+  updatedFormData.LV_tender_Commision_Amt=LV_tender_Commision_Amt
+
+
+
+  if (LV_NETPayble > 0) {
+      updatedFormData.voucher_type = "LV";
+  }
+  else {
+      updatedFormData.voucher_type = "CV";
+  }
+
+  return updatedFormData;
+
+}
 
   const PurchaseBillCalculation = async (name, input, formData, gstRate) => {
     // Clone formData and initialize additional fields
@@ -1853,16 +1895,16 @@ const DeliveryOrder = () => {
       headData = await PurchaseBillCalculation(
         "save",
         "ps",
-        formData,
+        headData,
         Gst_Rate
       );
 
-      headData = await saleBillCalculation("save", "sale", formData, Gst_Rate);
+      headData = await saleBillCalculation("save", "sale", headData, Gst_Rate);
     } else {
       headData = await CommisionBillCalculation(
         "save",
         "commi",
-        formData,
+        headData,
         Gst_Rate
       );
     }

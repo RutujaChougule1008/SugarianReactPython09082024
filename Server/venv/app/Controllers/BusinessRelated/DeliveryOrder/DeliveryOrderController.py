@@ -235,7 +235,11 @@ def insert_DeliveryOrder():
        
         logger.info("Fetched company parameters: %s", headData)
         max_doc_no = get_max_doc_no()
-        new_doc_no = max_doc_no + 1
+
+        if max_doc_no is None:
+            max_doc_no = 1
+        else:
+            new_doc_no = max_doc_no + 1
         
         
         headData['doc_no'] = new_doc_no
@@ -245,7 +249,10 @@ def insert_DeliveryOrder():
                             'TotalGstSaleBillAmount','Roundoff','SBTCSAmt','Net_Payble','SBTDSAmt','save' ,'sale',
                             'item_Amount','SB_Ac_Code','SB_Unit_Code','PS_CGSTAmount','PS_SGSTAmount','PS_IGSTAmount','PS_CGSTRATE',
                             'PS_SGSTRATE','PS_IGSTRATE','TOTALPurchase_Amount','PSTCS_Amt','PSTDS_Amt','PSNetPayble','PS_SelfBal','PS_amount','lblgetpasscodename',
-                            'lblvoucherByname','Gst_Rate','AutopurchaseBill']
+                            'lblvoucherByname','Gst_Rate','AutopurchaseBill','LV_CGSTAmount','LV_SGSTAmount','LV_IGSTAmount','LV_TotalAmount',
+                            'LV_TCSRate','LV_NETPayble','LV_TCSAmt','LV_TDSRate','LV_TDSAmt','LV_Igstrate','LV_Cgstrate','LV_taxableamount',
+                            'LV_Sgstrate','LV_Commision_Amt','LV_tender_Commision_Amt','gstratename','Gstrate']
+    
 
         for key in remove_sale_data:
             if key in headData:
@@ -623,18 +630,18 @@ def insert_DeliveryOrder():
             
             create_CommisionBill_entry= {
                 
-                                "Tran_Type":"SB","doc_date":headData["doc_date"],"link_no":new_doc_no,"link_type":"","link_id":0,
+                                "Tran_Type":headData['voucher_type'],"doc_date":headData["doc_date"],"link_no":new_doc_no,"link_type":"","link_id":0,
                                 "ac_code":headData['SaleBillTo'],"unit_code":headData['GETPASSCODE'],"broker_code":headData['broker'],
                                 "qntl":headData['quantal'],"packing":headData["packing"],"bags":headData['bags'],"grade":headData['grade'],
                                 "transport_code":headData["transport"],"mill_rate":headData["mill_rate"],"sale_rate":headData['sale_rate'],
-                                "purc_rate":headData["PurchaseRate"],"commission_amount":0,"resale_rate":headData["Tender_Commission"],"resale_commission":0,
-                                "texable_amount":0,"gst_code":headData["GstRateCode"],"cgst_rate":0,"cgst_amount":0,"sgst_rate":0,"sgst_amount":0,"igst_rate":0,"igst_amount":0,
-                                "bill_amount":0,"Company_Code":headData["company_code"],"Year_Code":headData["Year_Code"],"Created_By":headData["Created_By"],
+                                "purc_rate":headData["PurchaseRate"],"commission_amount":new_sale_data['LV_Commision_Amt'],"resale_rate":headData["Tender_Commission"],"resale_commission":new_sale_data['LV_tender_Commision_Amt'],
+                                "texable_amount":new_sale_data['LV_taxableamount'],"gst_code":headData["GstRateCode"],"cgst_rate":new_sale_data['LV_Cgstrate'],"cgst_amount":new_sale_data['LV_CGSTAmount'],"sgst_rate":new_sale_data['LV_Sgstrate'],"sgst_amount":new_sale_data['LV_SGSTAmount'],"igst_rate":new_sale_data['LV_Igstrate'],"igst_amount":new_sale_data['LV_IGSTAmount'],
+                                "bill_amount":new_sale_data['LV_TotalAmount'],"Company_Code":headData["company_code"],"Year_Code":headData["Year_Code"],"Created_By":headData["Created_By"],
                                 "ac":headData["sb"],"uc":headData["gp"],"bc":headData["bk"],"tc":headData["tc"],"mill_code":headData["mill_code"],"mc":headData["mc"],
-                                "narration1":"","narration2":"","narration3":"","narration4":"","TCS_Rate":headData["Sale_TCS_Rate"],"TCS_Amt":0,"TCS_Net_Payable":0,
-                                "Tran_Type":"","HSN":"","item_code":headData["itemcode"],"ic":headData["ic"],"Frieght_Rate":0,"Frieght_amt":headData["Memo_Advance"],
+                                "narration1":"","narration2":"","narration3":"","narration4":"","TCS_Rate":headData["Sale_TCS_Rate"],"TCS_Amt":new_sale_data['LV_TCSAmt'],"TCS_Net_Payable":new_sale_data['LV_NETPayble'],
+                                "Tran_Type":"","HSN":"","item_code":headData["itemcode"],"ic":headData["ic"],"Frieght_Rate":headData["MM_Rate"],"Frieght_amt":headData["Memo_Advance"],
                                 "subtotal":headData["diff_amount"],"IsTDS":headData["TDSCut"],"TDS_Ac":headData["TDSAc"],"TDS_Per":headData["TDSRate"],
-                                "TDSAmount":headData["TDSAmt"],"TDS":headData["TDSRate"],"ta":headData["TDSAcId"],'Branch_Code':0,'Created_By':''
+                                "TDSAmount":new_sale_data["LV_TDSAmt"],"TDS":headData["TDSRate"],"ta":headData["TDSAcId"],'Branch_Code':0,'Created_By':''
                  
             }
 
@@ -659,7 +666,7 @@ def insert_DeliveryOrder():
                 
                 # Extract 'doc_no' from 'new_Record_data'
                 voucher_no = new_record_data.get('doc_no')
-                
+                voucher_type = new_record_data.get('Tran_Type')
                 # Extract 'commissionid' directly from 'record'
                 commissionid = record.get('commissionid')
                 
@@ -670,6 +677,7 @@ def insert_DeliveryOrder():
                 # Example of assigning these values to a model instance and committing to the database
                 new_head.voucher_no = voucher_no
                 new_head.commisionid = commissionid
+                new_head.voucher_type = voucher_type
                 
                 # Commit changes to the database
                 db.session.commit()
@@ -822,7 +830,10 @@ def update_DeliveryOrder():
                             'TotalGstSaleBillAmount','Roundoff','SBTCSAmt','Net_Payble','SBTDSAmt','save' ,'sale',
                             'item_Amount','SB_Ac_Code','SB_Unit_Code','PS_CGSTAmount','PS_SGSTAmount','PS_IGSTAmount','PS_CGSTRATE',
                             'PS_SGSTRATE','PS_IGSTRATE','TOTALPurchase_Amount','PSTCS_Amt','PSTDS_Amt','PSNetPayble','PS_SelfBal','PS_amount','lblgetpasscodename',
-                            'lblvoucherByname','Gst_Rate',"gstratename",'Gstrate']
+                            'lblvoucherByname','Gst_Rate','AutopurchaseBill','LV_CGSTAmount','LV_SGSTAmount','LV_IGSTAmount','LV_TotalAmount',
+                            'LV_TCSRate','LV_NETPayble','LV_TCSAmt','LV_TDSRate','LV_TDSAmt','LV_Igstrate','LV_Cgstrate','LV_taxableamount',
+                            'LV_Sgstrate','LV_Commision_Amt','LV_tender_Commision_Amt','gstratename','Gstrate']
+    
         
         for key in remove_sale_data:
             if key in headData:
@@ -1041,6 +1052,7 @@ def update_DeliveryOrder():
                  'purchaseid': headData['purchaseid']
                  
             }
+            print("headData['purchaseid']",headData['purchaseid'])
             print('purchase',update_PurchaseBill_entry)
             response = requests.put("http://localhost:8080/api/sugarian/update-SugarPurchase", params=purch_param ,json=update_PurchaseBill_entry)
            
@@ -1126,30 +1138,33 @@ def update_DeliveryOrder():
                      
         else:
             
+             
             update_CommisionBill_entry= {
                         
-                               "doc_no":headData["voucher_no"],"commissionid":0,
-                                "doc_date":headData["doc_date"],"link_no":updateddoc_no,"link_type":"","link_id":0,
+                               "doc_no":headData["voucher_no"],"commissionid":headData['commisionid'],
+                               "doc_date":headData["doc_date"],"link_no":updateddoc_no,"link_type":"","link_id":0,
                                 "ac_code":headData['SaleBillTo'],"unit_code":headData['GETPASSCODE'],"broker_code":headData['broker'],
                                 "qntl":headData['quantal'],"packing":headData["packing"],"bags":headData['bags'],"grade":headData['grade'],
                                 "transport_code":headData["transport"],"mill_rate":headData["mill_rate"],"sale_rate":headData['sale_rate'],
-                                "purc_rate":headData["PurchaseRate"],"commission_amount":0,"resale_rate":headData["Tender_Commission"],"resale_commission":0,
-                                "texable_amount":0,"gst_code":headData["GstRateCode"],"cgst_rate":0,"cgst_amount":0,"sgst_rate":0,"sgst_amount":0,"igst_rate":0,"igst_amount":0,
-                                "bill_amount":0,"Company_Code":headData["company_code"],"Year_Code":headData["Year_Code"],"Created_By":headData["Created_By"],
+                                "purc_rate":headData["PurchaseRate"],"commission_amount":new_sale_data['LV_Commision_Amt'],"resale_rate":headData["Tender_Commission"],"resale_commission":new_sale_data['LV_tender_Commision_Amt'],
+                                "texable_amount":new_sale_data['LV_taxableamount'],"gst_code":headData["GstRateCode"],"cgst_rate":new_sale_data['LV_Cgstrate'],"cgst_amount":new_sale_data['LV_CGSTAmount'],"sgst_rate":new_sale_data['LV_Sgstrate'],"sgst_amount":new_sale_data['LV_SGSTAmount'],"igst_rate":new_sale_data['LV_Igstrate'],"igst_amount":new_sale_data['LV_IGSTAmount'],
+                                "bill_amount":new_sale_data['LV_TotalAmount'],"Company_Code":headData["company_code"],"Year_Code":headData["Year_Code"],"Created_By":headData["Created_By"],
                                 "ac":headData["sb"],"uc":headData["gp"],"bc":headData["bk"],"tc":headData["tc"],"mill_code":headData["mill_code"],"mc":headData["mc"],
-                                "narration1":"","narration2":"","narration3":"","narration4":"","TCS_Rate":headData["Sale_TCS_Rate"],"TCS_Amt":0,"TCS_Net_Payable":0,
-                                "Tran_Type":headData["voucher_type"],"HSN":"","item_code":headData["itemcode"],"ic":headData["ic"],"Frieght_Rate":0,"Frieght_amt":headData["Memo_Advance"],
+                                "narration1":"","narration2":"","narration3":"","narration4":"","TCS_Rate":headData["Sale_TCS_Rate"],"TCS_Amt":new_sale_data['LV_TCSAmt'],"TCS_Net_Payable":new_sale_data['LV_NETPayble'],
+                                "Tran_Type":headData['voucher_type'],"HSN":"","item_code":headData["itemcode"],"ic":headData["ic"],"Frieght_Rate":headData["MM_Rate"],"Frieght_amt":headData["Memo_Advance"],
                                 "subtotal":headData["diff_amount"],"IsTDS":headData["TDSCut"],"TDS_Ac":headData["TDSAc"],"TDS_Per":headData["TDSRate"],
-                                "TDSAmount":headData["TDSAmt"],"TDS":headData["TDSRate"],"ta":headData["TDSAcId"]
-                        
+                                "TDSAmount":new_sale_data["LV_TDSAmt"],"TDS":headData["TDSRate"],"ta":headData["TDSAcId"],'Branch_Code':0,'Created_By':''
+                 
             }
+            print('commision',update_CommisionBill_entry)
             query_params = {
                             'Company_Code': headData['company_code'],
                             'Year_Code': headData['Year_Code'],
-                            'Tran_Type': headData['voucher_type'],
+                            'Tran_Type': new_sale_data['voucher_type'],
                             'doc_no':headData['voucher_no']
                                         }
 
+           
             response = requests.put("http://localhost:8080/api/sugarian/update-CommissionBill",params=query_params,json=update_CommisionBill_entry)
 
             if response.status_code == 201:
@@ -1158,6 +1173,7 @@ def update_DeliveryOrder():
                 db.session.rollback()
                 return jsonify({"error": "Failed to update CommisionBill record", "details": response.json()}), response.status_code
             
+
 
 
          ####creation of stock entry

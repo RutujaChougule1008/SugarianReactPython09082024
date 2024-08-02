@@ -12,7 +12,7 @@ def fetch_company_parameters(company_code, year_code):
                          dbo.nt_1_companyparameters.COMMISSION_AC, commisionac.Ac_Code AS commisionaccode, commisionac.Ac_Name_E AS commisionacname, commisionac.accoid AS commisionacid, 
                          dbo.nt_1_companyparameters.RateDiffAc, ratediffac.Ac_Code AS ratediffaccode, ratediffac.Ac_Name_E AS ratediffacname, ratediffac.accoid AS ratediffacid, dbo.nt_1_companyparameters.CGST_RCM_Ac, 
                          dbo.nt_1_companyparameters.SGST_RCM_Ac, dbo.nt_1_companyparameters.IGST_RCM_Ac, RCMCGST.accoid AS RCMCGSTAcID, RCMSGST.accoid AS RCMSGSTacID, RCMIGST.accoid AS RCMIGSTAcID, 
-                         RCMCGST.Ac_Name_E AS RCMCGSTname, RCMSGST.Ac_Name_E AS RCMSGSTName, RCMIGST.Ac_Name_E AS RCMIGSTName
+                         RCMCGST.Ac_Name_E AS RCMCGSTname, RCMSGST.Ac_Name_E AS RCMSGSTName, RCMIGST.Ac_Name_E AS RCMIGSTName, dbo.nt_1_companyparameters.BalanceLimit
 FROM            dbo.nt_1_companyparameters INNER JOIN
                          dbo.nt_1_accountmaster AS saleigst ON dbo.nt_1_companyparameters.IGSTAc = saleigst.Ac_Code AND dbo.nt_1_companyparameters.Company_Code = saleigst.company_code INNER JOIN
                          dbo.nt_1_accountmaster AS salesgst ON dbo.nt_1_companyparameters.SGSTAc = salesgst.Ac_Code AND dbo.nt_1_companyparameters.Company_Code = salesgst.company_code INNER JOIN
@@ -31,6 +31,7 @@ FROM            dbo.nt_1_companyparameters INNER JOIN
                          dbo.nt_1_accountmaster AS commisionac ON dbo.nt_1_companyparameters.Company_Code = commisionac.company_code AND dbo.nt_1_companyparameters.COMMISSION_AC = commisionac.Ac_Code LEFT OUTER JOIN
                          dbo.nt_1_accountmaster AS frieghtac ON dbo.nt_1_companyparameters.Company_Code = frieghtac.company_code AND dbo.nt_1_companyparameters.Freight_Ac = frieghtac.Ac_Code LEFT OUTER JOIN
                          dbo.nt_1_accountmaster AS transporttdsaccut ON dbo.nt_1_companyparameters.TransportTDS_Ac = transporttdsaccut.Ac_Code AND dbo.nt_1_companyparameters.Company_Code = transporttdsaccut.company_code
+            
           WHERE dbo.nt_1_companyparameters.Company_Code = :company_code AND dbo.nt_1_companyparameters.Year_Code = :year_code
         """
         result = db.session.execute(text(query), {'company_code': company_code, 'year_code': year_code}).fetchone()
