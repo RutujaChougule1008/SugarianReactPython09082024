@@ -85,6 +85,7 @@ class AccountMaster(db.Model):
     VerifyAcNo2 = Column(String(50), nullable=True)
     VerifyAcNo3 = Column(String(50), nullable=True)
     TransporterId = Column(String(50), nullable=True)
+    user_id = Column(Integer,nullable=True)
 
     contacts = relationship('AccountContact', backref='accountmaster', lazy=True)
 

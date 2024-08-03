@@ -779,7 +779,7 @@ const DeliveryOrder = () => {
 
       //   setFormData(updatedFormData)
       console.log("Updated-------------", newData);
-
+     
       return newData;
     }
   };
@@ -794,6 +794,7 @@ const DeliveryOrder = () => {
     if (Carporate_Sale_No === 0) {
       assingqntl = details.last_details_data[0].Quantal;
     } else {
+    
       assingqntl = CarporateState.quantal;
     }
     const purcRate =
@@ -856,7 +857,7 @@ const DeliveryOrder = () => {
       }));
       console.log("new formdata", formData);
       setChangeData(true);
-      return newData;
+      // return newData;
     }
     if (Carporate_Sale_No === "") {
       const newData = {
@@ -899,7 +900,7 @@ const DeliveryOrder = () => {
         ...newData,
       }));
       console.log("NewTender-----", newData);
-
+      assingqntl = ""
       return newData;
     }
     //Calulate millamount
@@ -1608,6 +1609,7 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
 
   // Handle change for all inputs
   const handleChange = async (event) => {
+    debugger
     const { name, value } = event.target;
     const updatedFormData = await calculateDependentValues(
       name,
@@ -2769,8 +2771,8 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               name="Delivery_Type"
               value={
                 ChangeData
-                  ? CarporateState.Delivery_Type
-                  : tenderDetails.Delivery_Type
+                  ? 
+                   tenderDetails.Delivery_Type : CarporateState.Delivery_Type
               }
               onChange={handleChange}
               disabled={!isEditing && addOneButtonEnabled}
@@ -2813,10 +2815,10 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               }
               CategoryCode={
                 ChangeData
-                  ? CarporateState.newGETPASSCODE
-                  : tenderDetails.Getpassno ||
+                  ? 
+                   tenderDetails.Getpassno ||
                     newGETPASSCODE ||
-                    formData.GETPASSCODE
+                    formData.GETPASSCODE : CarporateState.newGETPASSCODE
               }
               tabIndex={45}
               disabledFeild={!isEditing && addOneButtonEnabled}
@@ -2868,8 +2870,8 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               }
               CategoryCode={
                 ChangeData
-                  ? CarporateState.voucher_by
-                  : tenderDetails.Buyer || newvoucher_by
+                  ? 
+                   tenderDetails.Buyer || newvoucher_by : CarporateState.voucher_by
               }
               tabIndex={17}
               disabledFeild={!isEditing && addOneButtonEnabled}
@@ -2902,8 +2904,8 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               }
               CategoryCode={
                 ChangeData
-                  ? CarporateState.SaleBillTo
-                  : tenderDetails.Buyer || newSaleBillTo
+                  ? 
+                   tenderDetails.Buyer || newSaleBillTo  : CarporateState.SaleBillTo
               }
               tabIndex={94}
               disabledFeild={!isEditing && addOneButtonEnabled}
@@ -2942,11 +2944,10 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               Name="quantal"
               value={
                 ChangeData
-                  ? CarporateState.quantal
-                  : tenderDetails.Quantal || formData.quantal
+                  ? tenderDetails.Quantal || formData.quantal : CarporateState.quantal
               }
               onChange={handleChange}
-              disabled={!isEditing && addOneButtonEnabled}
+              disabled={!isEditing && addOneButtonEnabled }
             />
             <label htmlFor="packing">Packing:</label>
             <input
@@ -3001,8 +3002,8 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               Name="sale_rate"
               value={
                 ChangeData
-                  ? CarporateState.sale_rate
-                  : tenderDetails.Sale_Rate || formData.sale_rate
+                  ? 
+                  tenderDetails.Sale_Rate || formData.sale_rate : CarporateState.sale_rate
               }
               onChange={handleChange}
               disabled={!isEditing && addOneButtonEnabled}
@@ -3026,8 +3027,8 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
               Name="Tender_Commission"
               value={
                 ChangeData
-                  ? CarporateState.Tender_Commission
-                  : tenderDetails.CR || formData.Tender_Commission
+                  ?
+                  tenderDetails.CR || formData.Tender_Commission :  CarporateState.Tender_Commission
               }
               onChange={handleChange}
               disabled={!isEditing && addOneButtonEnabled}

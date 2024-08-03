@@ -41,7 +41,7 @@ const CarporateHelp = ({ onAcCodeClick, name, Carporate_no, tabIndexHelp, disabl
             
             const url = `http://localhost:8080/api/sugarian/getCarporateData?CompanyCode=${CompanyCode}&Carporate_no=${carporateNo}&Year_Code=${YearCode}`;
             const response = await axios.get(url);
-            const details = response.data.last_Carporate_data;
+            const details = response.data;
             onTenderDetailsFetched(details)
             console.log("Carporate Details:", details);
     

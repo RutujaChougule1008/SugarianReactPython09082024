@@ -338,6 +338,7 @@ def insert_accountmaster():
             if user:
                 user.accoid = accoid
                 user.ac_code = ac_code
+                existing_master.user_id = user.user_id
                 db.session.commit()
                 return jsonify({
                     "message": "User updated successfully with existing AccountMaster",
@@ -402,6 +403,7 @@ def insert_accountmaster():
         if user:
             user.accoid = new_master.accoid
             user.ac_code = new_master.Ac_Code
+            new_master.user_id = user.user_id
             db.session.commit()
         # Continue with the gLedger record creation if user not found, no rollback needed
         else:

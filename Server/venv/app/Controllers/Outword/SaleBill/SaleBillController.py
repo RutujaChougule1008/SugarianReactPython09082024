@@ -628,6 +628,7 @@ def update_SaleBill():
         }), 201
 
     except Exception as e:
+        print('Traceback',traceback.format_exc())
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
