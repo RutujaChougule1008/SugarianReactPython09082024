@@ -44,6 +44,7 @@ import AccountMasterUtility from './Master/AccountInformation/AccountMaster/Acco
 import EBuySugarianUserUtility from './EBuySugarian/EBuySugarinUser/EBuySugarianUserUtility';
 import EBuySugarAccountMasterUtility from './EBuySugarian/EBuySugarinUser/EBuySugarAccountMasterUtility';
 import DeliveryOredrUtility from './BusinessRelated/DeliveryOrder/DeliveryOrderUtility';
+import SugarSaleReturnPurchase from './Inword/SugarSaleReturnPurchase/SugarSaleReturnPurchase';
 
 const routes = [
   {
@@ -243,6 +244,10 @@ const routes = [
 {
   path: '/delivery-order-utility',
   element: DeliveryOredrUtility
+},
+{
+  path: '/sugar-sale-return-purchase',
+  element: SugarSaleReturnPurchase
 },
 
 

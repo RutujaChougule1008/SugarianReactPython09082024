@@ -1328,7 +1328,7 @@ const handleGSTStateCode =(code) =>{
                       <span aria-hidden="true">&times;</span>
                     </button>
                   </div>
-                  <div className="modal-body">
+                  <div className="modal-body-acMaster">
                     <form>
                       
                       <label className="ac-master-form-label">Person Name:</label>

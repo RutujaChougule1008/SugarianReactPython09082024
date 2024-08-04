@@ -10,9 +10,10 @@ import ActionButtonGroup from "../../../Common/CommonButtons/ActionButtonGroup";
 import NavigationButtons from "../../../Common/CommonButtons/NavigationButtons";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import "./SaleBill.css";
+import "./SugarSaleReturnPurchase.css";
 import { HashLoader } from "react-spinners";
 import { z } from "zod";
+import PuchNoFromReturnPurchaseHelp from "../../../Helper/PuchNoFromReturnPurchaseHelp";
 
 // Validation Part Using Zod Library
 const stringToNumber = z
@@ -23,7 +24,7 @@ const stringToNumber = z
   .transform((value) => Number(value));
 
 // Validation Schemas
-const SaleBillSchema = z.object({
+const SugarSaleReturnPurchaseSchema = z.object({
   //   texable_amount: stringToNumber.refine(value => value !== undefined && value >= 0),
   //   bill_amount: stringToNumber.refine(value => value !== undefined && value >= 0),
   //   TCS_Net_Payable: stringToNumber.refine(value => value !== undefined && value >= 0),
@@ -60,7 +61,7 @@ const API_URL = process.env.REACT_APP_API;
 const companyCode = sessionStorage.getItem("Company_Code");
 const Year_Code = sessionStorage.getItem("Year_Code");
 
-const SaleBill = () => {
+const SugarSaleReturnPurchase = () => {
   const [users, setUsers] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
   const [popupMode, setPopupMode] = useState("add");
@@ -96,6 +97,7 @@ const SaleBill = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isChecked, setIsChecked] = useState(false);
   const [gstNo, setGstNo] = useState("");
+  const [purchNo,setPurchno] = useState("")
 
   //In utility page record doubleClicked that recod show for edit functionality
   const location = useLocation();
@@ -106,16 +108,18 @@ const SaleBill = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const initialFormData = {
-    doc_no: "",
-    PURCNO: "",
+    doc_no: 0,
+    PURCNO: 0,
+    PurcTranType: "",
+    Tran_Type: "",
     doc_date: new Date().toISOString().split("T")[0],
-    Ac_Code: "",
-    Unit_Code: "",
-    mill_code: "",
+    Ac_Code: 0,
+    Unit_Code: 0,
+    mill_code: 0,
     FROM_STATION: "",
     TO_STATION: "",
     LORRYNO: "",
-    BROKER: "",
+    BROKER: 0,
     wearhouse: "",
     subTotal: 0.0,
     LESS_FRT_RATE: 0.0,
@@ -126,55 +130,40 @@ const SaleBill = () => {
     Bill_Amount: 0.0,
     Due_Days: 0,
     NETQNTL: 0.0,
-    Company_Code: companyCode,
-    Year_Code: Year_Code,
-    Branch_Code: "",
+    Company_Code: 0,
+    Year_Code: 0,
+    Branch_Code: 0,
     Created_By: "",
     Modified_By: "",
-    Tran_Type: "",
-    DO_No: "",
-    Transport_Code: "",
-    RateDiff: 0.0,
-    ASN_No: "",
-    GstRateCode: "",
+    Bill_No: "",
     CGSTRate: 0.0,
     CGSTAmount: 0.0,
     SGSTRate: 0.0,
     SGSTAmount: 0.0,
     IGSTRate: 0.0,
     IGSTAmount: 0.0,
-    TaxableAmount: 0.0,
-    EWay_Bill_No: "",
-    EWayBill_Chk: "N",
-    MillInvoiceNo: "",
-    RoundOff: 0.0,
+    GstRateCode: 0,
+    purcyearcode: 0,
+    Bill_To: 0,
+    prid: 0,
+    srid: 0,
     ac: 0,
     uc: 0,
     mc: 0,
-    bk: 0,
-    tc: 0,
-    Purcid: 0,
-    DoNarrtion: "",
+    bc: 0,
+    bt: 0,
+    sbid: 0,
     TCS_Rate: 0.0,
     TCS_Amt: 0.0,
     TCS_Net_Payable: 0.0,
-    saleidnew: 0,
-    newsbno: 0,
-    newsbdate: new Date().toISOString().split("T")[0],
     einvoiceno: "",
     ackno: "",
-    Delivery_type: "",
-    Bill_To: 0,
-    bt: 0,
-    EwayBillValidDate: new Date().toISOString().split("T")[0],
-    IsDeleted: 1,
-    TDS_Amt: 0.0,
     TDS_Rate: 0.0,
-    SBNarration: "",
+    TDS_Amt: 0.0,
     QRCode: "",
-    Insured: "",
-    gstid: 0,
-  };
+    gstid: 0
+};
+
 
   const [formData, setFormData] = useState(initialFormData);
   const [billFrom, setBillFrom] = useState("");
@@ -256,7 +245,7 @@ const SaleBill = () => {
   // Validation Part
   const validateField = (name, value) => {
     try {
-      SaleBillSchema.pick({ [name]: true }).parse({ [name]: value });
+      SugarSaleReturnPurchaseSchema.pick({ [name]: true }).parse({ [name]: value });
       setFormErrors((prevErrors) => {
         const updatedErrors = { ...prevErrors };
         delete updatedErrors[name];
@@ -272,7 +261,7 @@ const SaleBill = () => {
 
   const validateForm = () => {
     try {
-      SaleBillSchema.parse(formData);
+      SugarSaleReturnPurchaseSchema.parse(formData);
       setFormErrors({});
       return true;
     } catch (err) {
@@ -1357,7 +1346,14 @@ const SaleBill = () => {
       console.error("Error in handleBillFrom:", error);
     }
   };
-  const handleBillNo = () => {};
+  const handlePurchaseNo = (purchaseNo) => {
+    setPurchno(purchaseNo)
+    setFormData({
+        ...formData,
+        PURCNO: purchaseNo
+        
+    })
+  };
 
   const handleBillTo = (code, accoid) => {
     setBillTo(code);
@@ -1449,8 +1445,8 @@ const SaleBill = () => {
       <ToastContainer />
   
 
-      <form className="SaleBill-container" onSubmit={handleSubmit}>
-        <h6 className="Heading">Sugar Bill For GST</h6>
+      <form className="SugarSaleReturnPurchase-container" onSubmit={handleSubmit}>
+        <h6 className="Heading">Sale Return</h6>
 
         <div>
           <ActionButtonGroup
@@ -1479,13 +1475,13 @@ const SaleBill = () => {
             isEditing={isEditing}
           />
         </div>
-        <div className="SaleBill-row">
-          <label className="SaleBill-form-label">Change No:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+        <div className="SugarSaleReturnPurchase-row">
+          <label className="SugarSaleReturnPurchase-form-label">Change No:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="changeNo"
                 autoComplete="off"
                 onKeyDown={handleKeyDown}
@@ -1493,13 +1489,13 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">Bill No:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Bill No:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 ref={setFocusTaskdate}
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="doc_no"
                 autoComplete="off"
                 value={formData.doc_no}
@@ -1508,15 +1504,46 @@ const SaleBill = () => {
               />
             </div>
           </div>
+ 
+          <label htmlFor="PURCNO" className="SugarSaleReturnPurchase-form-label">
+            Purchase No
+          </label>
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
+              <PuchNoFromReturnPurchaseHelp
+                onAcCodeClick={handlePurchaseNo}
+                purchaseNo={purchNo}
+                name="PURCNO"
+                tabIndexHelp={2}
+                disabledFeild={!isEditing && addOneButtonEnabled}
+              />
+            </div>
+          </div>   
 
-          <label className="SaleBill-form-label">Date:</label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Year</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
+              <input
+                ref={setFocusTaskdate}
+                type="text"
+                className="SugarSaleReturnPurchase-form-control"
+                name="Year_Code"
+                autoComplete="off"
+                value={formData.Year_Code}
+                onChange={handleChange}
+                disabled
+              />
+            </div>
+          </div>
+
+          <label className="SugarSaleReturnPurchase-form-label">Date:</label>
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="1"
                 ref={setFocusTaskdate}
                 type="date"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 id="datePicker"
                 name="doc_date"
                 value={formData.doc_date}
@@ -1527,12 +1554,12 @@ const SaleBill = () => {
           </div>
         </div>
 
-        <div className="SaleBill-row">
-          <label htmlFor="Ac_Code" className="SaleBill-form-label">
+        <div className="SugarSaleReturnPurchase-row">
+          <label htmlFor="Ac_Code" className="SugarSaleReturnPurchase-form-label">
             Bill From:
           </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <AccountMasterHelp
                 onAcCodeClick={handleBillFrom}
                 CategoryName={partyName}
@@ -1544,12 +1571,12 @@ const SaleBill = () => {
             </div>
           </div>
         </div>
-        <div className="SaleBill-row">
-          <label htmlFor="Bill_To" className="SaleBill-form-label">
+        <div className="SugarSaleReturnPurchase-row">
+          <label htmlFor="Bill_To" className="SugarSaleReturnPurchase-form-label">
             Bill To:
           </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <AccountMasterHelp
                 onAcCodeClick={handleBillTo}
                 CategoryName={billToName}
@@ -1561,12 +1588,12 @@ const SaleBill = () => {
             </div>
           </div>
         </div>
-        <div className="SaleBill-row">
-          <label htmlFor="Unit_Code" className="SaleBill-form-label">
+        <div className="SugarSaleReturnPurchase-row">
+          <label htmlFor="Unit_Code" className="SugarSaleReturnPurchase-form-label">
             Ship To:
           </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <AccountMasterHelp
                 onAcCodeClick={handleShipTo}
                 CategoryName={unitName}
@@ -1578,12 +1605,12 @@ const SaleBill = () => {
             </div>
           </div>
         </div>
-        <div className="SaleBill-row">
-          <label htmlFor="mill_code" className="SaleBill-form-label">
+        <div className="SugarSaleReturnPurchase-row">
+          <label htmlFor="mill_code" className="SugarSaleReturnPurchase-form-label">
             Mill:
           </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <AccountMasterHelp
                 onAcCodeClick={handleMillData}
                 CategoryName={millName}
@@ -1594,12 +1621,12 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">From:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">From:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="FROM_STATION"
                 autoComplete="off"
                 value={formData.FROM_STATION}
@@ -1608,12 +1635,12 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">To:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">To:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TO_STATION"
                 autoComplete="off"
                 value={formData.TO_STATION}
@@ -1622,12 +1649,12 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">Lorry No:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Lorry No:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="LORRYNO"
                 autoComplete="off"
                 value={formData.LORRYNO}
@@ -1636,13 +1663,13 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">WareHouse:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">WareHouse:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 ref={setFocusTaskdate}
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="wearhouse"
                 autoComplete="off"
                 value={formData.wearhouse}
@@ -1651,11 +1678,11 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label htmlFor="BROKER" className="SaleBill-form-label">
+          <label htmlFor="BROKER" className="SugarSaleReturnPurchase-form-label">
             Broker:
           </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <AccountMasterHelp
                 onAcCodeClick={handleBroker}
                 CategoryName={brokerName}
@@ -1666,11 +1693,11 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label htmlFor="GstRateCode" className="SaleBill-form-label">
+          <label htmlFor="GstRateCode" className="SugarSaleReturnPurchase-form-label">
             GST Rate Code:
           </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
+          <div className="SugarSaleReturnPurchase-col">
+            <div className="SugarSaleReturnPurchase-form-group">
               <GSTRateMasterHelp
                 onAcCodeClick={handleGstCode}
                 GstRateName={gstName}
@@ -1682,23 +1709,7 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label htmlFor="Insured" className="SaleBill-form-label">
-            Insured:
-          </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group-type">
-              <select
-                id="Insured"
-                name="Insured"
-                className="SaleBill-custom-select"
-                value={formData.Insured}
-                onChange={handleChange}
-              >
-                <option value="Y">Yes</option>
-                <option value="N">No</option>
-              </select>
-            </div>
-          </div>
+          
         </div>
 
         {isLoading && (
@@ -1747,25 +1758,14 @@ const SaleBill = () => {
                         />
                       </div>
 
-                      <label>Brand Code:</label>
-                      <div className="form-element">
-                        <BrandMasterHelp
-                          onAcCodeClick={handleBrandCode}
-                          brandName={brand_name}
-                          brandCode={brand_code}
-                          name="Brand_Code"
-                          tabIndexHelp={4}
-                          className="account-master-help"
-                        />
-                      </div>
 
-                      <label className="SaleBill-form-label">Quantal:</label>
-                      <div className="SaleBill-col-Ewaybillno">
-                        <div className="SaleBill-form-group">
+                      <label className="SugarSaleReturnPurchase-form-label">Quantal:</label>
+                      <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+                        <div className="SugarSaleReturnPurchase-form-group">
                           <input
                             type="text"
                             tabIndex="5"
-                            className="SaleBill-form-control"
+                            className="SugarSaleReturnPurchase-form-control"
                             name="Quantal"
                             autoComplete="off"
                             value={formDataDetail.Quantal}
@@ -1773,13 +1773,13 @@ const SaleBill = () => {
                           />
                         </div>
                       </div>
-                      <label className="SaleBill-form-label">Packing:</label>
-                      <div className="SaleBill-col-Ewaybillno">
-                        <div className="SaleBill-form-group">
+                      <label className="SugarSaleReturnPurchase-form-label">Packing:</label>
+                      <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+                        <div className="SugarSaleReturnPurchase-form-group">
                           <input
                             type="text"
                             tabIndex="5"
-                            className="SaleBill-form-control"
+                            className="SugarSaleReturnPurchase-form-control"
                             name="packing"
                             autoComplete="off"
                             value={formDataDetail.packing}
@@ -1787,13 +1787,13 @@ const SaleBill = () => {
                           />
                         </div>
                       </div>
-                      <label className="SaleBill-form-label">Bags:</label>
-                      <div className="SaleBill-col-Ewaybillno">
-                        <div className="SaleBill-form-group">
+                      <label className="SugarSaleReturnPurchase-form-label">Bags:</label>
+                      <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+                        <div className="SugarSaleReturnPurchase-form-group">
                           <input
                             type="text"
                             tabIndex="5"
-                            className="SaleBill-form-control"
+                            className="SugarSaleReturnPurchase-form-control"
                             name="bags"
                             autoComplete="off"
                             value={formDataDetail.bags}
@@ -1801,13 +1801,13 @@ const SaleBill = () => {
                           />
                         </div>
                       </div>
-                      <label className="SaleBill-form-label">Rate:</label>
-                      <div className="SaleBill-col-Ewaybillno">
-                        <div className="SaleBill-form-group">
+                      <label className="SugarSaleReturnPurchase-form-label">Rate:</label>
+                      <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+                        <div className="SugarSaleReturnPurchase-form-group">
                           <input
                             type="text"
                             tabIndex="5"
-                            className="SaleBill-form-control"
+                            className="SugarSaleReturnPurchase-form-control"
                             name="rate"
                             autoComplete="off"
                             value={formDataDetail.rate}
@@ -1815,15 +1815,15 @@ const SaleBill = () => {
                           />
                         </div>
                       </div>
-                      <label className="SaleBill-form-label">
+                      <label className="SugarSaleReturnPurchase-form-label">
                         Item Amount:
                       </label>
-                      <div className="SaleBill-col-Ewaybillno">
-                        <div className="SaleBill-form-group">
+                      <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+                        <div className="SugarSaleReturnPurchase-form-group">
                           <input
                             type="text"
                             tabIndex="5"
-                            className="SaleBill-form-control"
+                            className="SugarSaleReturnPurchase-form-control"
                             name="item_Amount"
                             autoComplete="off"
                             value={formDataDetail.item_Amount}
@@ -1831,13 +1831,13 @@ const SaleBill = () => {
                           />
                         </div>
                       </div>
-                      <label className="SaleBill-form-label">Narration:</label>
-                      <div className="SaleBill-col-Ewaybillno">
-                        <div className="SaleBill-form-group">
-                          <textPath
+                      <label className="SugarSaleReturnPurchase-form-label">Narration:</label>
+                      <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+                        <div className="SugarSaleReturnPurchase-form-group">
+                          <textarea
                             type="text"
                             tabIndex="5"
-                            className="SaleBill-form-control"
+                            className="SugarSaleReturnPurchase-form-control"
                             name="narration"
                             autoComplete="off"
                             value={formDataDetail.narration}
@@ -1923,8 +1923,6 @@ const SaleBill = () => {
                 <th>RowAction</th> */}
                   <th>Item</th>
                   <th>Item Name</th>
-                  <th>Brand Code</th>
-                  <th>Brand Name</th>
                   <th>Quantal</th>
                   <th>Packing</th>
                   <th>Bags</th>
@@ -1982,8 +1980,6 @@ const SaleBill = () => {
                   <td>{user.rowaction}</td> */}
                     <td>{user.item_code}</td>
                     <td>{user.item_Name}</td>
-                    <td>{user.Brand_Code}</td>
-                    <td>{user.brand_name}</td>
                     <td>{user.Quantal}</td>
                     <td>{user.packing}</td>
                     <td>{user.bags}</td>
@@ -1997,14 +1993,14 @@ const SaleBill = () => {
           </div>
         </div>
 
-        <div className="SaleBill-row">
-          <label className="SaleBill-form-label">Net Quantal</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+        <div className="SugarSaleReturnPurchase-row">
+          <label className="SugarSaleReturnPurchase-form-label">Net Quantal</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="9"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="NETQNTL"
                 autoComplete="off"
                 value={formData.NETQNTL}
@@ -2013,13 +2009,13 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">Due Days</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Due Days</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="9"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="Due_Days"
                 autoComplete="off"
                 value={formData.Due_Days}
@@ -2029,198 +2025,26 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">ASN/GRN No:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
-              <input
-                tabIndex="9"
-                type="text"
-                className="SaleBill-form-control"
-                name="ASN_No"
-                autoComplete="off"
-                value={formData.ASN_No}
-                onChange={handleChange}
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
+    
 
-          <label htmlFor="Transport_Code" className="SaleBill-form-label">
-            Transport:
-          </label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
-              <AccountMasterHelp
-                onAcCodeClick={handleTransport}
-                CategoryName={transportName}
-                CategoryCode={transportCode}
-                name="Transport_Code"
-                tabIndexHelp={2}
-                disabledFeild={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
+    
 
-          <label className="SaleBill-form-label">Eway Bill No:</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="EWay_Bill_No"
-                autoComplete="off"
-                value={formData.EWay_Bill_No}
-                onChange={handleChange}
-                tabIndex="10"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label"></label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
-              <input
-                type="checkbox"
-                id="EWayBill_Chk"
-                checked={isChecked}
-                onChange={handleOnChange}
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-              {isChecked && (
-                <label id="IsmillName">{millname || millName}</label>
-              )}
-            </div>
-          </div>
-          <label className="SaleBill-form-label"></label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="EWay_Bill_No"
-                autoComplete="off"
-                value={formData.EWay_Bill_No}
-                onChange={handleChange}
-                tabIndex="10"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label">EWayBill Validate Date:</label>
-          <div className="SaleBill-col">
-            <div className="SaleBill-form-group">
-              <input
-                tabIndex="4"
-                type="date"
-                className="SaleBill-form-control"
-                id="datePicker"
-                name="EwayBillValidDate"
-                value={formData.EwayBillValidDate}
-                onChange={(e) => handleDateChange(e, "EwayBillValidDate")}
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
+          
+          
+          
+          
 
-          <label className="SaleBill-form-label">Party</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
+          
+          
+          
+          
+          
+          <label className="SugarSaleReturnPurchase-form-label">EInvoice No:</label>
+          <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 type="text"
-                className="SaleBill-form-control"
-                name="partyMobNo"
-                autoComplete="off"
-                value={PartyMobNo || partyMobNo || 0}
-                onChange={handleChange}
-                tabIndex="11"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label">Transport</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="TransportMobNo"
-                autoComplete="off"
-                value={TransportMobNo || transportMob || 0}
-                onChange={handleChange}
-                tabIndex="11"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label">Driver</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="newsbno"
-                autoComplete="off"
-                value={formData.newsbno}
-                onChange={handleChange}
-                tabIndex="11"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label">GST No</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="GSTNo"
-                autoComplete="off"
-                value={isChecked ? millGSTNo || millgstno : gstNo}
-                tabIndex="11"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label">Unit</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="newsbno"
-                autoComplete="off"
-                value={UnitMobNo || shipToMobNo || 0}
-                onChange={handleChange}
-                tabIndex="11"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <div>
-            <button>SMS</button>
-          </div>
-
-          <label className="SaleBill-form-label">New SB No:</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
-                name="newsbno"
-                autoComplete="off"
-                value={formData.newsbno}
-                onChange={handleChange}
-                tabIndex="11"
-                disabled={!isEditing && addOneButtonEnabled}
-              />
-            </div>
-          </div>
-          <label className="SaleBill-form-label">EInvoice No:</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
-              <input
-                type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="einvoiceno"
                 autoComplete="off"
                 value={formData.einvoiceno}
@@ -2231,12 +2055,12 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">ACK No:</label>
-          <div className="SaleBill-col-Ewaybillno">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">ACK No:</label>
+          <div className="SugarSaleReturnPurchase-col-Ewaybillno">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="ackno"
                 autoComplete="off"
                 value={formData.ackno}
@@ -2247,28 +2071,15 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label" style={{ fontWeight: "bold" }}>
-            SB Narration:
-          </label>
-          <div className="SaleBill-col">
-            <textarea
-              name="SBNarration"
-              value={formData.SBNarration}
-              onChange={handleChange}
-              autoComplete="off"
-              tabIndex="12"
-              disabled={!isEditing && addOneButtonEnabled}
-            />
-          </div>
         </div>
-        <div className="SaleBill-row">
-          <label className="SaleBill-form-label">SubTotal:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+        <div className="SugarSaleReturnPurchase-row">
+          <label className="SugarSaleReturnPurchase-form-label">SubTotal:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="13"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="subTotal"
                 autoComplete="off"
                 value={formData.subTotal}
@@ -2277,13 +2088,13 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">Add Frt. Rs:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Add Frt. Rs:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="14"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="LESS_FRT_RATE"
                 autoComplete="off"
                 value={formData.LESS_FRT_RATE}
@@ -2294,7 +2105,7 @@ const SaleBill = () => {
               <input
                 tabIndex="15"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="freight"
                 autoComplete="off"
                 value={formData.freight}
@@ -2304,13 +2115,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">Taxable Amount:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Taxable Amount:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="13"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TaxableAmount"
                 autoComplete="off"
                 value={formData.TaxableAmount}
@@ -2320,13 +2131,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">CGST:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">CGST:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="14"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="CGSTRate"
                 autoComplete="off"
                 value={formData.CGSTRate}
@@ -2337,7 +2148,7 @@ const SaleBill = () => {
               <input
                 tabIndex="15"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="CGSTAmount"
                 autoComplete="off"
                 value={formData.CGSTAmount}
@@ -2347,13 +2158,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">SGST:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">SGST:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="16"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="SGSTRate"
                 autoComplete="off"
                 value={formData.SGSTRate}
@@ -2364,7 +2175,7 @@ const SaleBill = () => {
               <input
                 tabIndex="17"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="SGSTAmount"
                 autoComplete="off"
                 value={formData.SGSTAmount}
@@ -2374,13 +2185,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">IGST:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">IGST:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="18"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="IGSTRate"
                 autoComplete="off"
                 value={formData.IGSTRate}
@@ -2391,7 +2202,7 @@ const SaleBill = () => {
               <input
                 tabIndex="19"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="IGSTAmount"
                 autoComplete="off"
                 value={formData.IGSTAmount}
@@ -2401,13 +2212,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">Rate Diff:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Rate Diff:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="18"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="RateDiff"
                 autoComplete="off"
                 value={formData.RateDiff}
@@ -2418,7 +2229,7 @@ const SaleBill = () => {
               <input
                 tabIndex="19"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="RateDiffAmount"
                 autoComplete="off"
                 value={calculateRateDiffAmount()}
@@ -2428,13 +2239,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">MISC:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">MISC:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="20"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="OTHER_AMT"
                 autoComplete="off"
                 value={formData.OTHER_AMT}
@@ -2443,13 +2254,13 @@ const SaleBill = () => {
               />
             </div>
           </div>
-          <label className="SaleBill-form-label">Cash Advance</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Cash Advance</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="18"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="cash_advance"
                 autoComplete="off"
                 value={formData.cash_advance}
@@ -2459,13 +2270,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">Round Off</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Round Off</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="18"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="RoundOff"
                 autoComplete="off"
                 value={formData.RoundOff}
@@ -2475,13 +2286,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">Bill Amount:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Bill Amount:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="21"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="Bill_Amount"
                 autoComplete="off"
                 value={formData.Bill_Amount}
@@ -2492,13 +2303,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">TCS %:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">TCS %:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="22"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TCS_Rate"
                 autoComplete="off"
                 value={formData.TCS_Rate}
@@ -2508,7 +2319,7 @@ const SaleBill = () => {
               <input
                 tabIndex="23"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TCS_Amt"
                 autoComplete="off"
                 value={formData.TCS_Amt}
@@ -2518,13 +2329,13 @@ const SaleBill = () => {
             </div>
           </div>
 
-          <label className="SaleBill-form-label">Net Payable:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+          <label className="SugarSaleReturnPurchase-form-label">Net Payable:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="24"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TCS_Net_Payable"
                 autoComplete="off"
                 style={{ color: "red", fontWeight: "bold" }}
@@ -2536,14 +2347,14 @@ const SaleBill = () => {
           </div>
         </div>
 
-        <div className="SaleBill-row">
-          <label className="SaleBill-form-label">TDS %:</label>
-          <div className="SaleBill-col-Text">
-            <div className="SaleBill-form-group">
+        <div className="SugarSaleReturnPurchase-row">
+          <label className="SugarSaleReturnPurchase-form-label">TDS %:</label>
+          <div className="SugarSaleReturnPurchase-col-Text">
+            <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="25"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TDS_Rate"
                 autoComplete="off"
                 value={formData.TDS_Rate}
@@ -2553,7 +2364,7 @@ const SaleBill = () => {
               <input
                 tabIndex="26"
                 type="text"
-                className="SaleBill-form-control"
+                className="SugarSaleReturnPurchase-form-control"
                 name="TDS_Amt"
                 autoComplete="off"
                 value={formData.TDS_Amt !== null ? formData.TDS_Amt : ""}
@@ -2568,4 +2379,4 @@ const SaleBill = () => {
     </>
   );
 };
-export default SaleBill;
+export default SugarSaleReturnPurchase;

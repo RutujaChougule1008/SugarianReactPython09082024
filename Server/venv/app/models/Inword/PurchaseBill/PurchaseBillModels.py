@@ -59,6 +59,7 @@ class SugarPurchase(db.Model):
     TDS_Amt = db.Column(db.Numeric(18, 2), nullable=True)
     TDS_Rate = db.Column(db.Numeric(18, 3), nullable=True)
     Retail_Stock = db.Column(db.String(1), nullable=True)
+    gstid = db.Column(db.Integer, nullable=True)
     
     details = db.relationship('SugarPurchaseDetail', backref='purchase', lazy=True)
 
@@ -79,7 +80,7 @@ class SugarPurchaseDetail(db.Model):
     item_Amount = db.Column(db.Numeric(18, 2), nullable=True)
     Company_Code = db.Column(db.Integer, nullable=True)
     Year_Code = db.Column(db.Integer, nullable=True)
-    Branch_Code = db.Column(db.Integer, nullable=False)
+    Branch_Code = db.Column(db.Integer, nullable=True)
     Created_By = db.Column(db.String(255), nullable=True)
     Modified_By = db.Column(db.String(255), nullable=True)
     ic = db.Column(db.Integer, nullable=True)

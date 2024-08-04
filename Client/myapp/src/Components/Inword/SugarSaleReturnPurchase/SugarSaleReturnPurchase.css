@@ -1,4 +1,4 @@
-.ac-master-form-container {
+.SugarSaleReturnPurchase-container {
     max-width: 100%;
     margin: auto;
     padding: 20px;
@@ -6,21 +6,21 @@
     border-radius: 8px;
     background-color: #76D7C4 ;
 }
-.SaleBill-col-Text{
+.SugarSaleReturnPurchase-col-Text{
     flex: 0 0 auto;
     padding: 0px;
     margin-left: 10px;
     width: 130px;
 }
 
-.ac-master-col-Ewaybillno{
+.SugarSaleReturnPurchase-col-Ewaybillno{
     flex: 0 0 auto;
     padding: 0px;
     margin-left: 10px;
     width: 200px;
 }
 
-.SaleBill-form-group-type{
+.SugarSaleReturnPurchase-form-group-type{
     flex: 0 0 auto;
     padding: 0px;
     margin-left: 10px;
@@ -28,34 +28,32 @@
 }
 
 
-.SaleBill-row {
+.SugarSaleReturnPurchase-row {
     display: flex;
     flex-wrap: wrap;
     margin-bottom: -10px;
-    align-items: flex-start;
     
 }
 
-.SaleBill-col {
+.SugarSaleReturnPurchase-col {
     flex: 0 0 auto;
     padding: 0px;
     margin-left: 10px;
 }
 
-.ac-master-form-group {
+.SugarSaleReturnPurchase-form-group {
     margin-bottom: 1rem;
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
 }
 
-.ac-master-form-label {
+.SugarSaleReturnPurchase-form-label {
     margin-bottom: .5rem;
     font-weight: bold;
     margin-left: 10px;
 }
 
-.SaleBill-custom-select, .ac-master-form-control {
+.SugarSaleReturnPurchase-custom-select, .SugarSaleReturnPurchase-form-control {
     display: block;
     width: 100%;
     padding: .375rem .75rem;
@@ -69,13 +67,13 @@
     transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 }
 
-.ac-master-form-control[disabled], .ac-master-form-control[readonly] {
+.SugarSaleReturnPurchase-form-control[disabled], .SugarSaleReturnPurchase-form-control[readonly] {
     background-color: #e9ecef;
     opacity: 1;
 }
 
-.ac-master-form-container textarea {
-    width: 30%;
+textarea {
+    width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -91,57 +89,63 @@
     font-weight: bold;
   }
 
-  .eTenderButton {
-    margin-right: 20px;
-}
-
-
 
 
   /* styles.css */
 
-
-
-  .modal-body-acMaster {
+.modal-body {
     padding: 20px;
     background-color: #f9f9f9; /* Light background for better readability */
     border-radius: 8px;
-    display: flex;
   }
   
-  .modal-body-acMaster form {
+  .modal-body form {
     display: flex;
     flex-direction: column;
-    margin-left: 110px;
-  }
-
-  .modal-body-acMaster form textarea{
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 16px;
   }
   
-  .modal-body-acMaster label {
+  .modal-body label {
     font-weight: bold;
     margin-bottom: 5px;
-    margin-top: 5px; /* Space between the previous input and the next label */
+    margin-top: 15px; /* Space between the previous input and the next label */
   }
   
-  .modal-bodymodal-body-acMaster .form-element {
+  .modal-body .form-element {
     margin-bottom: 15px;
   }
   
   .account-master-help {
     margin-top: 5px;
   }
-
-  .modal-title{
-    white-space: nowrap;
-  }
   
 
+
+  /* cgst css */
+
+
+  .SugarSaleReturnPurchase-CGST-row {
+    display: flex;
+    align-items: center;
+}
+
+.SugarSaleReturnPurchase-CGST-form-label {
+    margin-right: 10px; /* Adjust as necessary for spacing */
+}
+
+.SugarSaleReturnPurchase-CGST-col-Text {
+    display: flex;
+    flex: 1;
+    gap: 10px; /* Add space between the input fields if needed */
+}
+
+.SugarSaleReturnPurchase-CGST-form-group {
+    display: flex;
+    flex: 1;
+}
+
+.SugarSaleReturnPurchase-CGST-form-control {
+    width: 100%; /* Ensures input fields take full width within the group */
+}
 
 
 
@@ -166,35 +170,3 @@
 .Heading{
   margin-bottom: -30px;
 }
-
-#Grid
-.ac-master-form-group {
-    margin: 0;
-    padding: 0;
-  }
-  
-  .custom-table {
-    width: 30%;
-    border-collapse: collapse;
-    margin: 0;
-  }
-  
-  .custom-table th, .custom-table td {
-    padding: 4px;
-    text-align: left;
-    border: 1px solid #ddd;
-    font-size: 13px;
-    font-weight: bold;
-  }
-  
-  .custom-table th {
-    background-color: #f2f2f2;
-  }
-  
-  .custom-table tbody tr td input[type="checkbox"] {
-    margin: 0;
-    padding: 0;
-    width: 16px; 
-    height: 16px;
-  }
-  
