@@ -31,7 +31,7 @@ const SugarSaleReturnPurchaseSchema = z.object({
 });
 
 //Global Variables
-var newSaleid = "";
+var newPrid = "";
 var partyName = "";
 var partyCode = "";
 var millName = "";
@@ -45,17 +45,10 @@ var item_Code = "";
 var gstrate = "";
 var gstRateCode = "";
 var gstName = "";
-var brandName = "";
-var brandCode = "";
-var transportName = "";
-var transportCode = "";
 var billToName = "";
 var billToCode = "";
-var selectedfilter = "";
-var PartyMobNo = "";
-var TransportMobNo = "";
-var UnitMobNo = "";
-var millgstno = "";
+
+
 
 const API_URL = process.env.REACT_APP_API;
 const companyCode = sessionStorage.getItem("Company_Code");
@@ -69,8 +62,6 @@ const SugarSaleReturnPurchase = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [itemCode, setItemCode] = useState("");
   const [item_Name, setItemName] = useState("");
-  const [brand_code, setBrandCode] = useState("");
-  const [brand_name, setBrandName] = useState("");
   const [itemCodeAccoid, setItemCodeAccoid] = useState("");
   const [formDataDetail, setFormDataDetail] = useState({
     narration: "",
@@ -98,6 +89,7 @@ const SugarSaleReturnPurchase = () => {
   const [isChecked, setIsChecked] = useState(false);
   const [gstNo, setGstNo] = useState("");
   const [purchNo,setPurchno] = useState("")
+  const [saleBillDataDetails,setSaleBillDataDetials] = useState({})
 
   //In utility page record doubleClicked that recod show for edit functionality
   const location = useLocation();
@@ -322,10 +314,6 @@ const SugarSaleReturnPurchase = () => {
     item_Code = "";
     gstrate = "";
     gstRateCode = "";
-    brandName = "";
-    brandCode = "";
-    transportName = "";
-    transportCode = "";
     billToName = "";
     billToCode = "";
     setLastTenderDetails([]);
@@ -380,7 +368,7 @@ const SugarSaleReturnPurchase = () => {
 
     try {
       if (isEditMode) {
-        const updateApiUrl = `${API_URL}/update-SaleBill?saleid=${newSaleid}`;
+        const updateApiUrl = `${API_URL}/update-SaleBill?saleid=${newPrid}`;
         const response = await axios.put(updateApiUrl, requestData);
 
         toast.success("Data updated successfully!");
@@ -430,7 +418,7 @@ const SugarSaleReturnPurchase = () => {
       setIsLoading(true);
 
       try {
-        const deleteApiUrl = `${API_URL}/delete_data_by_saleid?saleid=${newSaleid}&Company_Code=${companyCode}&doc_no=${formData.doc_no}&Year_Code=${Year_Code}`;
+        const deleteApiUrl = `${API_URL}/delete_data_by_saleid?saleid=${newPrid}&Company_Code=${companyCode}&doc_no=${formData.doc_no}&Year_Code=${Year_Code}`;
         const response = await axios.delete(deleteApiUrl);
 
         if (response.status === 200) {
@@ -470,7 +458,7 @@ const SugarSaleReturnPurchase = () => {
       );
       if (response.status === 200) {
         const data = response.data;
-        newSaleid = data.last_head_data.saleid;
+        newPrid = data.last_head_data.saleid;
         partyName = data.last_details_data[0].partyname;
         partyCode = data.last_head_data.Ac_Code;
         unitName = data.last_details_data[0].unitname;
@@ -484,16 +472,11 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.last_head_data.mill_code;
         itemName = data.last_details_data[0].itemname;
         item_Code = data.last_details_data[0].System_Code;
-        brandName = data.last_details_data[0].brandname;
-        brandCode = data.last_details_data[0].brandocno;
+        
         brokerCode = data.last_details_data[0].brokeraccode;
         brokerName = data.last_details_data[0].brokername;
-        transportCode = data.last_details_data[0].transportaccode;
-        transportName = data.last_details_data[0].transportname;
-        PartyMobNo = data.last_details_data[0].PartyMobNo;
-        TransportMobNo = data.last_details_data[0].TransportMobNo;
-        UnitMobNo = data.last_details_data[0].UnitMobNo;
-        millgstno = data.last_details_data[0].MillGSTNo;
+      
+        
         setFormData((prevData) => ({
           ...prevData,
           ...data.last_head_data,
@@ -524,7 +507,7 @@ const SugarSaleReturnPurchase = () => {
       );
       if (response.status === 200) {
         const data = response.data;
-        newSaleid = data.first_head_data.saleid;
+        newPrid = data.first_head_data.saleid;
         partyName = data.first_details_data[0].partyname;
         partyCode = data.first_head_data.Ac_Code;
         unitName = data.first_details_data[0].unitname;
@@ -537,13 +520,8 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.first_head_data.mill_code;
         itemName = data.first_details_data[0].itemname;
         item_Code = data.first_details_data[0].System_Code;
-        brandName = data.first_details_data[0].brandName;
-        brandCode = data.first_details_data[0].brandCode;
         brokerCode = data.first_details_data[0].brokeraccode;
         brokerName = data.first_details_data[0].brokername;
-        transportCode = data.first_details_data[0].transportaccode;
-        transportName = data.first_details_data[0].transportname;
-        millgstno = data.first_details_data[0].MillGSTNo;
         setFormData((prevData) => ({
           ...prevData,
           ...data.first_head_data,
@@ -570,7 +548,7 @@ const SugarSaleReturnPurchase = () => {
       );
       if (response.status === 200) {
         const data = response.data;
-        newSaleid = data.last_head_data.saleid;
+        newPrid = data.last_head_data.saleid;
         partyName = data.last_details_data[0].partyname;
         partyCode = data.last_head_data.Ac_Code;
         unitName = data.last_details_data[0].unitname;
@@ -583,13 +561,10 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.last_head_data.mill_code;
         itemName = data.last_details_data[0].itemname;
         item_Code = data.last_details_data[0].System_Code;
-        brandName = data.last_details_data[0].brandName;
-        brandCode = data.last_details_data[0].brandCode;
+        
         brokerCode = data.last_details_data[0].brokeraccode;
         brokerName = data.last_details_data[0].brokername;
-        transportCode = data.last_details_data[0].transportaccode;
-        transportName = data.last_details_data[0].transportname;
-        millgstno = data.last_details_data[0].MillGSTNo;
+        
         setFormData((prevData) => ({
           ...prevData,
           ...data.last_head_data,
@@ -616,7 +591,7 @@ const SugarSaleReturnPurchase = () => {
       );
       if (response.status === 200) {
         const data = response.data;
-        newSaleid = data.next_head_data.saleid;
+        newPrid = data.next_head_data.saleid;
         partyName = data.next_details_data[0].partyname;
         partyCode = data.next_head_data.Ac_Code;
         unitName = data.next_details_data[0].unitname;
@@ -629,13 +604,10 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.next_head_data.mill_code;
         itemName = data.next_details_data[0].itemname;
         item_Code = data.next_details_data[0].System_Code;
-        brandName = data.next_details_data[0].brandName;
-        brandCode = data.next_details_data[0].brandCode;
+        
         brokerCode = data.next_details_data[0].brokeraccode;
         brokerName = data.next_details_data[0].brokername;
-        transportCode = data.next_details_data[0].transportaccode;
-        transportName = data.next_details_data[0].transportname;
-        millgstno = data.next_details_data[0].MillGSTNo;
+       
         setFormData((prevData) => ({
           ...prevData,
           ...data.next_head_data,
@@ -663,7 +635,7 @@ const SugarSaleReturnPurchase = () => {
 
       if (response.status === 200) {
         const data = response.data;
-        newSaleid = data.previous_head_data.saleid;
+        newPrid = data.previous_head_data.saleid;
         partyName = data.previous_details_data[0].partyname;
         partyCode = data.previous_head_data.Ac_Code;
         unitName = data.previous_details_data[0].unitname;
@@ -676,13 +648,10 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.previous_head_data.mill_code;
         itemName = data.previous_details_data[0].itemname;
         item_Code = data.previous_details_data[0].System_Code;
-        brandName = data.previous_details_data[0].brandName;
-        brandCode = data.previous_details_data[0].brandCode;
+        
         brokerCode = data.previous_details_data[0].brokeraccode;
         brokerName = data.previous_details_data[0].brokername;
-        transportCode = data.previous_details_data[0].transportaccode;
-        transportName = data.previous_details_data[0].transportname;
-        millgstno = data.previous_details_data[0].MillGSTNo;
+        
         setFormData((prevData) => ({
           ...prevData,
           ...data.previous_head_data,
@@ -730,7 +699,7 @@ const SugarSaleReturnPurchase = () => {
       if (response.status === 200) {
         const data = response.data;
 
-        newSaleid = data.last_head_data.saleid;
+        newPrid = data.last_head_data.saleid;
         partyName = data.last_details_data[0].partyname;
         partyCode = data.last_head_data.Ac_Code;
         unitName = data.last_details_data[0].unitname;
@@ -743,13 +712,11 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.last_head_data.mill_code;
         itemName = data.last_details_data[0].itemname;
         item_Code = data.last_details_data[0].System_Code;
-        brandName = data.last_details_data[0].brandName;
-        brandCode = data.last_details_data[0].brandCode;
+        
         brokerCode = data.last_details_data[0].brokeraccode;
         brokerName = data.last_details_data[0].brokername;
-        transportCode = data.last_details_data[0].transportaccode;
-        transportName = data.last_details_data[0].transportname;
-        millgstno = data.last_details_data[0].MillGSTNo;
+        
+       
         setFormData((prevData) => ({
           ...prevData,
           ...data.last_head_data,
@@ -776,7 +743,7 @@ const SugarSaleReturnPurchase = () => {
           `${API_URL}/SaleBillByid?doc_no=${changeNoValue}&Company_Code=${companyCode}&Year_Code=${Year_Code}`
         );
         const data = response.data;
-        newSaleid = data.last_head_data.saleid;
+        newPrid = data.last_head_data.saleid;
         partyName = data.last_details_data[0].partyname;
         partyCode = data.last_head_data.Ac_Code;
         unitName = data.last_details_data[0].unitname;
@@ -789,13 +756,10 @@ const SugarSaleReturnPurchase = () => {
         millCode = data.last_head_data.mill_code;
         itemName = data.last_details_data[0].itemname;
         item_Code = data.last_details_data[0].System_Code;
-        brandName = data.last_details_data[0].brandName;
-        brandCode = data.last_details_data[0].brandCode;
+        
         brokerCode = data.last_details_data[0].brokeraccode;
         brokerName = data.last_details_data[0].brokername;
-        transportCode = data.last_details_data[0].transportaccode;
-        transportName = data.last_details_data[0].transportname;
-        millgstno = data.last_details_data[0].MillGSTNo;
+        
         setFormData({
           ...formData,
           ...data.last_head_data,
@@ -940,6 +904,87 @@ const SugarSaleReturnPurchase = () => {
     return updatedFormData;
   };
 
+  const saleBillHeadData = (data) => {
+    console.log(data)
+    
+        
+    setFormData((prevData) => {
+      const { doc_no, ...remainingData } = data;
+      return {
+        ...prevData,
+        ...remainingData,
+      };
+    });
+        setLastTenderData(data || {});
+        setLastTenderDetails(data.last_details_data || [])
+
+
+  }
+
+  const saleBillDetailData = (details) => {
+    let nextId = 1; 
+    console.log("Detail", details);
+    
+    setSaleBillDataDetials(details);  // Assuming setSaleBillDataDetials is defined elsewhere
+  
+    partyName = details.partyname;
+    partyCode = details.partyaccode;
+     unitName = details.unitname;
+     unitCode = details.unitaccode;
+     billToName = details.billtoname;
+     billToCode = details.Bill_To;
+     gstrate = details.gstrate;
+     gstRateCode = details.GstRateCode;
+     millName = details.millname;
+     millCode = details.millaccode;
+     itemName = details.itemname;
+     item_Code = details.System_Code;
+     brokerCode = details.brokeraccode;
+     brokerName = details.brokername;
+
+     const newId = nextId;
+  nextId += 1;
+  
+    setFormDataDetail((prevData) => {
+      const newDetailData = {
+        ...prevData,
+        item_code: details.item_code,
+        item_Name: details.itemname,
+        id: newId,
+        ic: details.ic,
+        saledetailid: details.saledetailid,
+        narration: details.narration,
+        Quantal: details.Quantal,
+        bags: details.bags,
+        packing: details.packing,
+        rate: details.rate,
+        item_Amount: details.item_Amount,
+        rowaction: "add",
+      };
+      console.log(newDetailData);
+      return newDetailData;  // Ensure that setFormDataDetail returns new data
+    });
+
+    setUsers((prevUsers) => {
+      const updatedUsers = [...prevUsers, {
+        item_code: details.item_code,
+        item_Name: details.itemname,
+        id: newId,
+        ic: details.ic,
+        saledetailid: details.saledetailid,
+        narration: details.narration,
+        Quantal: details.Quantal,
+        bags: details.bags,
+        packing: details.packing,
+        rate: details.rate,
+        item_Amount: details.item_Amount,
+        rowaction: "add",
+      }];
+      console.log("Updated Users:", updatedUsers);
+      return updatedUsers;
+    });
+  };
+  
   useEffect(() => {
     if (selectedRecord) {
       setUsers(
@@ -947,8 +992,7 @@ const SugarSaleReturnPurchase = () => {
           item_code: detail.item_code,
           item_Name: detail.item_Name,
           rowaction: "Normal",
-          Brand_Code: detail.Brand_Code,
-          brand_name: detail.brand_name,
+          
           ic: detail.ic,
           id: users.length > 0 ? Math.max(...users.map((user) => user.id)) + 1 : 1,
           saledetailid: detail.saledetailid,
@@ -965,11 +1009,11 @@ const SugarSaleReturnPurchase = () => {
 
   useEffect(() => {
     const updatedUsers = lastTenderDetails.map((detail) => ({
-      item_code: detail.item_code,
+      item_code: detail.item_code ,
       item_Name: detail.itemname,
       rowaction: "Normal",
-      Brand_Code: detail.Brand_Code,
-      brand_name: detail.brandname,
+      
+      
       ic: detail.ic,
       id: users.length > 0 ? Math.max(...users.map((user) => user.id)) + 1 : 1,
       saledetailid: detail.saledetailid,
@@ -1022,8 +1066,7 @@ const SugarSaleReturnPurchase = () => {
       item_code: itemCode,
       item_Name: item_Name,
       ic: itemCodeAccoid,
-      Brand_Code: brand_code,
-      brand_name: brand_name,
+      
       ...formDataDetail,
       rowaction: "add",
     };
@@ -1074,8 +1117,7 @@ const SugarSaleReturnPurchase = () => {
           user.rowaction === "Normal" ? "update" : user.rowaction;
         return {
           ...user,
-          Brand_Code: brand_code,
-          brand_name: brand_name,
+          
           item_code: itemCode,
           item_Name: item_Name,
           packing: formDataDetail.packing,
@@ -1265,16 +1307,14 @@ const SugarSaleReturnPurchase = () => {
     });
     setItemCode("");
     setItemName("");
-    setBrandCode("");
-    setBrandName("");
+    
   };
 
   const editUser = (user) => {
     setSelectedUser(user);
     setItemCode(user.item_code);
     setItemName(user.item_Name);
-    setBrandCode(user.Brand_Code);
-    setBrandName(user.brand_name);
+    
     setFormDataDetail({
       narration: user.narration || "",
       packing: user.packing || 0,
@@ -1292,11 +1332,7 @@ const SugarSaleReturnPurchase = () => {
     setItemCodeAccoid(accoid);
   };
 
-  const handleBrandCode = (code, name) => {
-    setBrandCode(code);
-    setBrandName(name);
-    console.log(name);
-  };
+  
 
 
   //Head Section help Functions to manage the Ac_Code and accoid
@@ -1421,15 +1457,7 @@ const SugarSaleReturnPurchase = () => {
       setFormData(newFormData);
     } catch (error) {}
   };
-  const handleTransport = (code, accoid, name, mobileNo) => {
-    setTransport(code);
-    setTransportMob(mobileNo);
-    setFormData({
-      ...formData,
-      Transport_Code: code,
-      tc: accoid,
-    });
-  };
+ 
 
   const handleBroker = (code, accoid) => {
     setBroker(code);
@@ -1440,6 +1468,7 @@ const SugarSaleReturnPurchase = () => {
     });
   };
 
+  
   return (
     <>
       <ToastContainer />
@@ -1514,6 +1543,8 @@ const SugarSaleReturnPurchase = () => {
                 onAcCodeClick={handlePurchaseNo}
                 purchaseNo={purchNo}
                 name="PURCNO"
+                OnSaleBillHead = {saleBillHeadData}
+                OnSaleBillDetail = {saleBillDetailData}
                 tabIndexHelp={2}
                 disabledFeild={!isEditing && addOneButtonEnabled}
               />
@@ -1749,7 +1780,7 @@ const SugarSaleReturnPurchase = () => {
                       <div className="form-element">
                         <ItemMasterHelp
                           onAcCodeClick={handleItemCode}
-                          CategoryName={item_Name}
+                          CategoryName={item_Name }
                           CategoryCode={itemCode}
                           SystemType="I"
                           name="item_code"

@@ -10,7 +10,7 @@ const CompanyCode = sessionStorage.getItem("Company_Code")
 const API_URL = process.env.REACT_APP_API;
 const Year_Code = sessionStorage.getItem("Year_Code");
 
-const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,disabledFeild,tabIndexHelp}) => {
+const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBillHead,OnSaleBillDetail,disabledFeild,tabIndexHelp}) => {
 
     const [showModal, setShowModal] = useState(false);
     const [popupContent, setPopupContent] = useState([]);
@@ -97,11 +97,30 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,disabled
         }
     };
 
+    const fetchSaleBillData = async (purchaNo) => {
+        try {
+            
+            const response = await axios.get(`http://localhost:8080/api/sugarian/SaleBillByid?Company_Code=${CompanyCode}&Year_Code=${Year_Code}&doc_no=${purchaNo}`);
+            const saleBillHead = response.data.last_head_data;
+            const saleBillDetail = response.data.last_details_data[0];
+            OnSaleBillHead(saleBillHead)
+            OnSaleBillDetail(saleBillDetail)
+            console.log("saleBillData", saleBillHead);
+    
+            // Optionally update state or perform additional actions with these details
+        } catch (error) {
+            console.error("Error fetching SaleBill data:", error);
+        }
+    };
+    
+
     //After open popup onDoubleClick event that record display on the feilds
     const handleRecordDoubleClick = (item) => {
         if (lActiveInputFeild === name) {
             setEnteredAcCode(item.doc_no);
             setType(item.Tran_Type)
+
+            fetchSaleBillData(item.doc_no);
            
 
             if (onAcCodeClick) {

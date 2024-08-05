@@ -569,6 +569,9 @@ const Navbar = () => {
           </div>
         )}
       </div>
+      <div className="nav-item" onMouseEnter={() => handleMouseEnter('eTender')}>
+        <Link to="/eBuySugarian-user-utility" className="nav-link">eTender</Link>
+      </div>
       <div className="nav-item" onClick={handleLogOut} onMouseEnter={() => handleMouseEnter('log-out')}>
         <Link to="/" className="nav-link">Log Out</Link>
       </div>
