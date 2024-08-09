@@ -13,6 +13,7 @@ import CityMasterHelp from "../../../../Helper/CityMasterHelp";
 import { HashLoader } from "react-spinners";
 import './AccountMaster.css'
 
+
  const companyCode = sessionStorage.getItem('Company_Code')
 const Year_Code = sessionStorage.getItem('Year_Code')
 const API_URL = process.env.REACT_APP_API;
@@ -197,7 +198,101 @@ const handleGSTStateCode =(code) =>{
         }));
     };
 
-
+    const handleSearchClick = async () => {
+      const apiUrl = 'https://www.ewaybills.com/MVEWBAuthenticate/MVAppSCommonSearchTP';
+      const cityApiUrl = `${API_URL}/get-citybyPinCode`;
+      const apiKey = 'bk59oPDpaGTtJa4';
+      const apiSecret = 'EajrxDcIWLhGfRHLej7zjw=='; 
+      const gstNo = formData.Gst_No;
+  
+      const requestBody = {
+          "AppSCommonSearchTPItem": [{
+              "GSTIN": gstNo
+          }]
+      };
+  
+      try {
+          // Fetch taxpayer details
+          const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'MVApiKey': apiKey,
+                  'MVSecretKey': apiSecret,
+                  'GSTIN': gstNo
+              },
+              body: JSON.stringify(requestBody)
+          });
+  
+          if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+  
+          const data = await response.json();
+  
+          if (data.Status === "1" && data.lstAppSCommonSearchTPResponse.length > 0) {
+              const taxpayerDetails = data.lstAppSCommonSearchTPResponse[0];
+              const address = taxpayerDetails.pradr.addr;
+              const concatenatedAddress = `${address.bno} ${address.bnm} ${address.st} ${address.flno} ${address.loc} ${address.pncd} ${address.stcd}`;
+              const ac_name = taxpayerDetails.tradeNam;
+              newGSTStateCode = taxpayerDetails.RequestedGSTIN.substring(0, 2).trim();
+              const pincode = address.pncd;
+              const city_name = address.loc;
+  
+              try {
+                  // Fetch city code based on pincode and city name
+                  const cityResponse = await fetch(`${cityApiUrl}?pincode=${pincode}&city_name_e=${city_name}`);
+  
+                  if (!cityResponse.ok) {
+                      if (cityResponse.status === 404) {
+                          // City code not found, set empty city code
+                          toast.info('City code not found. Other details have been updated.');
+                          setFormData(prevState => ({
+                              ...prevState,
+                              Address_E: concatenatedAddress,
+                              Ac_Name_E: ac_name,
+                              GSTStateCode: newGSTStateCode,
+                              Pincode: pincode,
+                              City_Code: '' // Set city code as empty if not found
+                          }));
+                      } else {
+                          throw new Error(`HTTP error! Status: ${cityResponse.status}`);
+                      }
+                  } else {
+                      const cityData = await cityResponse.json();
+  
+                      // Update form data with city code and other fetched details
+                      setFormData(prevState => ({
+                          ...prevState,
+                          Address_E: concatenatedAddress,
+                          Ac_Name_E: ac_name,
+                          GSTStateCode: newGSTStateCode,
+                          Pincode: pincode,
+                          City_Code: cityData.city_code 
+                      }));
+                  }
+              } catch (cityError) {
+                  console.error('Error fetching city data:', cityError);
+                  toast.error('Error fetching city data.');
+                  // Set form data with empty city code if there’s an error
+                  setFormData(prevState => ({
+                      ...prevState,
+                      Address_E: concatenatedAddress,
+                      Ac_Name_E: ac_name,
+                      GSTStateCode: newGSTStateCode,
+                      Pincode: pincode,
+                      City_Code: '' // Set city code as empty if there’s an error
+                  }));
+              }
+          } else {
+              // Handle case where no taxpayer details are returned
+              toast.error('No taxpayer details found.');
+          }
+      } catch (error) {
+          console.error('Error fetching data:', error);
+          toast.error(`Error fetching data: ${error.message}`);
+      }
+  };
     //Detail Part Functionality
 
     const openPopup = (mode) => {
@@ -448,9 +543,9 @@ const handleGSTStateCode =(code) =>{
             setCancelButtonEnabled(false);
             setIsEditing(true);
     
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
+            // setTimeout(() => {
+            //   window.location.reload();
+            // }, 1000);
           }
         } catch (error) {
           console.error("Error during API call:", error);
@@ -942,7 +1037,22 @@ const handleGSTStateCode =(code) =>{
                             value={formData.Gst_No}
                             onChange={handleChange}
                             disabled={!isEditing && addOneButtonEnabled}
+
+
                         />
+
+<svg 
+                        className="search-icon"
+                        onClick={handleSearchClick}
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        height="24"
+                    >
+                        <path d="M10,20a10,10,0,1,1,10-10A10,10,0,0,1,10,20ZM10,2a8,8,0,1,0,8,8A8,8,0,0,0,10,2Z" />
+                        <path d="M22,22l-5.66-5.66a8,8,0,1,1,1.41-1.41L22,22ZM20.59,21.17,16.66,17.24a9,9,0,1,0-1.41,1.41l3.93,3.93Z" />
+                    </svg>
+                        
                         <label htmlFor="Email_Id">Email::</label>
                         <input
                             type="text"

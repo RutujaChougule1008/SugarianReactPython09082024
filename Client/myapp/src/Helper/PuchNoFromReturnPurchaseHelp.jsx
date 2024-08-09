@@ -105,7 +105,7 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
             const saleBillDetail = response.data.last_details_data[0];
             OnSaleBillHead(saleBillHead)
             OnSaleBillDetail(saleBillDetail)
-            console.log("saleBillData", saleBillHead);
+            
     
             // Optionally update state or perform additional actions with these details
         } catch (error) {

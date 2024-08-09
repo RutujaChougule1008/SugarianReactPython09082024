@@ -945,6 +945,165 @@ const DeliveryOrder = () => {
     }
   };
 
+  const AmountCalculation = async (name, input, formData) => {  
+    debugger;
+    formData={
+      ...formData,
+      TCS_Rate:0.00,
+      Sale_TCS_Rate:0.00,
+      SaleTDSRate:0.00,
+      PurchaseTDSRate:0.00,
+    }
+  
+    let updatedFormData = { ...formData, [name]: input };
+    let Amount=0.00;
+    let Amountf = 0.00;
+    let SaleBillTo = updatedFormData.SaleBillTo;
+    let Amt = 0.00;
+    let SBBalAmt = 0.00;
+    let gstRateExise = parseFloat(updatedFormData.excise_Rate) || 0.00
+    let saleRate = 0.00;    
+    let actualSaleRate = parseFloat(updatedFormData.sale_rate) || 0.00
+    let commision = parseFloat(updatedFormData.Tender_Commission) || 0.00
+    let insurance = parseFloat(updatedFormData.Insurance) || 0.00
+    let qt = parseFloat(updatedFormData.quantal) ||  0.00;
+    let SaleTDS =0.00
+    let PurchaseTDS = 0.00;
+  
+    let PSAmt = 0.00;
+    let PSBalAmt = 0.00;
+    let PSRate = parseFloat(updatedFormData.PurchaseRate) || 0.00;
+    let PSAmountf = 0.00;
+    let PSAmount = 0.00;
+    let purcno=updatedFormData.purc_no
+    let  TCS_Rate=0.00
+    let Sale_TCS_Rate=0.00
+    let SaleTDSRate=0.00
+    let PurchaseTDSRate=0.00
+    console.log('amt----------',updatedFormData)
+  
+    const url = `http://localhost:8080/api/sugarian/getAmountcalculationData?CompanyCode=${companyCode}&SalebilltoAc=${SaleBillTo}&Year_Code=${Year_Code}&purcno=${purcno}`;
+    const response = await axios.get(url);
+    const details = response.data;
+    PSBalAmt = PSRate * qt;
+    PSAmountf=details['PSAmt']
+    Amountf=details['SBAmt']
+    let balancelimit=details['Balancelimt'] 
+    PurchaseTDS=details['PurchaseTDSApplicable']
+    SaleTDS=details['SaleTDSApplicable_Data']
+    PurchaseTDSRate=details['PurchaseTDSRate']
+    let TCSRate=details['TCSRate']
+    SaleTDSRate=details['SaleTDSRate']
+    
+              // #checking purchase balancelimit
+  
+              if (PSAmountf == 0)
+              {
+                PSAmountf = 0.00
+              }
+              PSAmount = PSAmountf + PSBalAmt;
+  
+              if (PSAmount >= balancelimit)
+              {
+                  if (PurchaseTDS == "N")
+                  {
+                      updatedFormData.PurchaseTDSRate = 0.00;
+                      updatedFormData.TCS_Rate = TCSRate
+                  }
+                  else if (PurchaseTDS == "Y" || PurchaseTDS == "P")
+                  {
+                    updatedFormData.PurchaseTDSRate  = PurchaseTDSRate
+                    updatedFormData.TCS_Rate = 0.00;
+                  }
+               }
+              else
+              {
+                updatedFormData.PurchaseTDSRate= 0.00;
+  
+                  if (PurchaseTDS == "P")
+                  {
+                    updatedFormData.PurchaseTDSRate = PurchaseTDSRate
+                    updatedFormData.TCS_Rate = 0.00;
+                  }
+                  else if (PurchaseTDS == "B") {
+                    updatedFormData.PurchaseTDSRate= 0.00;
+                    updatedFormData.TCS_Rate = TCSRate
+                  }
+                  updatedFormData.TCS_Rate = 0.00;
+  
+              }
+  
+              if (PurchaseTDS == "L") 
+              {
+                alert('Purchase Party Is Lock !');
+               
+              }
+              if (SaleTDS == "L") 
+              {
+                alert('Sale Party Is Lock !');
+                 
+              }
+                //chcking sale balancelimt
+              saleRate = actualSaleRate + commision + insurance;
+              SBBalAmt = (saleRate * gstRate) / 100 + saleRate * qt;
+              if (Amountf == 0)
+              {
+                Amountf = 0.00
+              }
+              Amountf = Amountf || 0.00;
+              Amountf = parseFloat(Amountf);
+              Amount = Amountf + SBBalAmt;
+              if (Amount >= balancelimit)
+                {
+                    if (SaleTDS == "Y" || SaleTDS == "S")
+                    {
+                        updatedFormData.SaleTDSRate = SaleTDSRate
+                        updatedFormData.Sale_TCS_Rate = 0.00
+                    }
+    
+                    else if (SaleTDS == "U")
+                   {
+                          
+                          alert('Unregistered Person, Limit Exceeded over sale Limit!');
+                   }
+                   
+                    else
+                    {
+                       updatedFormData.SaleTDSRate = 0.00
+                       updatedFormData.Sale_TCS_Rate = TCSRate
+                    }
+                }
+                else
+                {
+                    updatedFormData.SaleTDSRate = 0.00
+    
+                    updatedFormData.Sale_TCS_Rate = 0.00
+                    if (PurchaseTDS == "B")
+                    {
+                        updatedFormData.TCS_Rate = TCSRate
+                    }
+                    if (SaleTDS == "S")
+                    {
+                        updatedFormData.SaleTDSRate = SaleTDSRate
+                        updatedFormData.Sale_TCS_Rate = 0.00
+                    }
+                    if (SaleTDS == "T")
+                    {
+                        updatedFormData.SaleTDSRate= 0.00;
+                        updatedFormData.Sale_TCS_Rate  = TCSRate
+                    }
+    
+                }
+  
+    
+  
+    return updatedFormData;
+  
+  
+  }
+  
+  
+
   //calculating memo gstamount
   const calculatememogstrateamount = async (
     name,
@@ -1618,6 +1777,12 @@ const CommisionBillCalculation = async (name, input, formData, gstRate) => {
     );
 
     setFormData(updatedFormData);
+    const TDSTCSData = await AmountCalculation(
+      name,
+      value, // Pass the correct gstRate
+      formData // Pass gstRate explicitly to calculateDependentValues
+    );
+    setFormData(TDSTCSData);
   };
 
   const deleteModeHandler = async (userToDelete) => {

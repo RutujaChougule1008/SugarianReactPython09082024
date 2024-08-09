@@ -93,6 +93,42 @@ def get_CityByCityCode():
         print(e)
         return jsonify({'error': 'Internal server error'}), 500
 
+@app.route(API_URL + "/get-citybypinCode", methods=["GET"])
+def CitybyPinCode():
+    try:
+        # Extract pinCode or city_name_e from query parameters
+        pinCode = request.args.get('pincode')
+        city_name_e = request.args.get('city_name_e')
+
+        if pinCode is None and city_name_e is None:
+            return jsonify({'error': 'Missing pincode or city_name_e parameter'}), 400
+
+        if pinCode:
+            # Handle the case when pinCode is provided
+            try:
+                pinCode = int(pinCode)
+                # Fetch data based on pinCode
+                City = CityMaster.query.filter_by(pincode=pinCode).first()
+            except ValueError:
+                return jsonify({'error': 'Invalid pincode parameter'}), 400
+
+        elif city_name_e:
+            # Handle the case when city_name_e is provided
+            # You would need to query based on city_name_e instead
+            City = CityMaster.query.filter_by(city_name_e=city_name_e).first()
+            
+        if City is None:
+            return jsonify({'error': 'City not found'}), 404
+
+        # Convert City to a dictionary
+        city_data = {'city_code': City.city_code}
+
+        return jsonify(city_data)
+    except Exception as e:
+        print(e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 
 # Create a new City
 @app.route(API_URL + "/create-city", methods=["POST"])

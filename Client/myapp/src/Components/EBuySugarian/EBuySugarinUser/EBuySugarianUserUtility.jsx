@@ -16,6 +16,7 @@ import Pagination from "../../../Common/UtilityCommon/Pagination";
 import SearchBar from "../../../Common/UtilityCommon/SearchBar";
 import PerPageSelect from "../../../Common/UtilityCommon/PerPageSelect";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
 
 const API_URL = process.env.REACT_APP_API;
 const companyCode = sessionStorage.getItem('Company_Code');
@@ -75,8 +76,13 @@ function EBuySugarianUserUtility() {
     };
 
     const handleRowClick = (gst_no) => {
-        navigate("/eBuySugarian-AcMaster-utility", { state: { gst_no } });
+        if (gst_no === "" || !gst_no) {
+            toast.info("No GST Number Provided for this record");
+        } else {
+            navigate("/eBuySugarian-AcMaster-utility", { state: { gst_no } });
+        }
     };
+    
 
     const handleSearchClick = () => {
         // Handle search button click if needed
@@ -88,6 +94,7 @@ function EBuySugarianUserUtility() {
 
     return (
         <div className="container" style={{ padding: '20px', overflow: 'hidden' }}>
+            <ToastContainer/>
             <Typography variant="h4" gutterBottom style={{ textAlign: 'center', marginBottom: '20px' }}>
                 Users List
             </Typography>

@@ -284,7 +284,6 @@ def get_nextaccountMaster_navigation():
     except Exception as e:
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
-
 @app.route(API_URL + "/insert-accountmaster", methods=["POST"])
 def insert_accountmaster():
     tranType = "OP"
@@ -328,30 +327,35 @@ def insert_accountmaster():
         contact_data = data['contact_data']
 
         gst_no = master_data.get('Gst_No')
-        existing_master = AccountMaster.query.filter_by(Gst_No=gst_no).first()
 
-        if existing_master:
-            accoid = existing_master.accoid
-            ac_code = existing_master.Ac_Code
-            # Update TblUsers table with the accoid
-            user = EBuyUsers.query.filter_by(gst_no=gst_no).first()
-            if user:
-                user.accoid = accoid
-                user.ac_code = ac_code
-                existing_master.user_id = user.user_id
-                db.session.commit()
-                return jsonify({
-                    "message": "User updated successfully with existing AccountMaster",
-                    "accoid": accoid
-                }), 200
-            # Continue to create a new AccountMaster record if user not found, no rollback needed
-            else:
-                pass
+        if gst_no:
+            # Check for existing record by GST No
+            existing_master = AccountMaster.query.filter_by(Gst_No=gst_no).first()
 
-        # Set Ac_Code to max + 1
-        max_ac_code = db.session.query(func.max(AccountMaster.Ac_Code)).scalar() or 0
-        master_data['Ac_Code'] = max_ac_code + 1
+            if existing_master:
+                existing_ac_code = existing_master.Ac_Code
+                input_ac_code = master_data.get('Ac_Code')
 
+                # If Ac_Code matches, proceed with updating user details
+                if existing_ac_code == input_ac_code:
+                    accoid = existing_master.accoid
+                    user = EBuyUsers.query.filter_by(gst_no=gst_no).first()
+                    if user:
+                        user.accoid = accoid
+                        user.ac_code = existing_ac_code
+                        existing_master.user_id = user.user_id
+                        db.session.commit()
+                        return jsonify({
+                            "message": "User updated successfully with existing AccountMaster",
+                            "accoid": accoid
+                        }), 200
+                else:
+                    existing_master = None  # Treat as new record if Ac_Code is different
+
+        # Insert new record logic
+        if 'Ac_Code' not in master_data or not master_data['Ac_Code']:
+            max_ac_code = db.session.query(func.max(AccountMaster.Ac_Code)).scalar() or 0
+            master_data['Ac_Code'] = max_ac_code + 1
         new_master = AccountMaster(**master_data)
         db.session.add(new_master)
         db.session.flush()  # Ensure new_master.accoid is generated
@@ -405,9 +409,6 @@ def insert_accountmaster():
             user.ac_code = new_master.Ac_Code
             new_master.user_id = user.user_id
             db.session.commit()
-        # Continue with the gLedger record creation if user not found, no rollback needed
-        else:
-            pass
 
         query_params = {
             'Company_Code': master_data['company_code'],
@@ -421,7 +422,7 @@ def insert_accountmaster():
         if response.status_code == 201:
             db.session.commit()
         else:
-            print("Traceback", traceback.format_exc())
+            print("Error creating gLedger record:", response.json())
             db.session.rollback()
             return jsonify({"error": "Failed to create gLedger record", "details": response.json()}), response.status_code
 
@@ -432,11 +433,16 @@ def insert_accountmaster():
             "updatedDetails": updatedDetails,
             "deletedDetailIds": deletedDetailIds
         }), 201
+    
+    
 
     except Exception as e:
         print("Traceback", traceback.format_exc())
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
+
+
 
 
 # Update record for AccountMaster and AccountContact

@@ -1536,3 +1536,172 @@ def get_nextDO_navigation():
         return jsonify(response), 200
     except Exception as e:
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    
+@app.route(API_URL + "/getAmountcalculationData", methods=["GET"])
+def getAmountcalculationData():
+    try:
+        # Retrieve query parameters
+        Company_Code = request.args.get('CompanyCode')
+        SalebilltoAc = request.args.get('SalebilltoAc')
+        Year_Code = request.args.get('Year_Code')
+        purcno = request.args.get('purcno')
+
+        # Validate required parameters
+        if not all([Company_Code, SalebilltoAc, Year_Code, purcno]):
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        PSAmt = 0.00
+        SBAmt=0.00
+
+        with db.session.begin_nested():
+            # Check if TDS is applicable for Sale
+            SaleTDSApplicable = db.session.execute(
+                text('''
+                    SELECT TDSApplicable
+                    FROM nt_1_accountmaster
+                    WHERE Company_Code = :Company_Code AND Ac_Code = :SalebilltoAc
+                '''),
+                {'Company_Code': Company_Code, 'SalebilltoAc': SalebilltoAc}
+            )
+            SaleTDSApplicable_Data = SaleTDSApplicable.fetchone()
+            print('saletds',SaleTDSApplicable_Data)
+            if not SaleTDSApplicable_Data:
+                return jsonify({"error": "Sale TDS applicability not found"}), 404
+
+            # Retrieve Payment To from purcno
+            PaymentTo = db.session.execute(
+                text('''
+                    SELECT Payment_To
+                    FROM qrytenderheaddetail
+                    WHERE Company_Code = :Company_Code AND Tender_No = :purcno
+                '''),
+                {'Company_Code': Company_Code, 'purcno': purcno}
+            )
+            PaymentTo_Data = PaymentTo.fetchone()
+            print('PaymentTo_Data',PaymentTo_Data)
+            if not PaymentTo_Data:
+                return jsonify({"error": "Payment To not found"}), 404
+
+            Payment_AC = PaymentTo_Data.Payment_To
+
+            # Retrieve PAN for Payment To
+            PaymentToCompanyPan = db.session.execute(
+                text('''
+                    SELECT CompanyPan
+                    FROM nt_1_accountmaster
+                    WHERE Company_Code = :Company_Code AND Ac_Code = :Payment_AC
+                '''),
+                {'Company_Code': Company_Code, 'Payment_AC': Payment_AC}
+            )
+            PaymentToCompanyPan_Data = PaymentToCompanyPan.fetchone()
+            if not PaymentToCompanyPan_Data:
+                return jsonify({"error": "Payment To Company PAN not found"}), 404
+            
+            print("PaymentToCompanyPan_Data:", PaymentToCompanyPan_Data)
+
+            CompanyPan = PaymentToCompanyPan_Data.CompanyPan
+           
+            # Retrieve Ac_Code associated with CompanyPan
+            PaymentToCompanyPan = db.session.execute(
+                text('''
+                    SELECT Ac_Code
+                    FROM nt_1_accountmaster
+                    WHERE Company_Code = :Company_Code AND CompanyPan = :CompanyPan
+                '''),
+                {'Company_Code': Company_Code, 'CompanyPan': CompanyPan}
+            )
+            PaymentToCompanyPan_Data = PaymentToCompanyPan.fetchall()
+            print('PAN',PaymentToCompanyPan_Data)
+            if not PaymentToCompanyPan_Data:
+                return jsonify({"error": "No accounts found for Company PAN"}), 404
+
+            # Check if Purchase TDS is applicable
+            PurchaseTDSApplicable = db.session.execute(
+                text('''
+                    SELECT TDSApplicable
+                    FROM qrymstaccountmaster
+                    WHERE Company_Code = :Company_Code AND Ac_Code = :Payment_AC
+                '''),
+                {'Company_Code': Company_Code, 'Payment_AC': Payment_AC}
+            )
+            PurchaseTDSApplicable_Data = PurchaseTDSApplicable.fetchone()
+            if not PurchaseTDSApplicable_Data:
+                return jsonify({"error": "Purchase TDS applicability not found"}), 404
+
+            # Calculate PSAmt
+            for item in PaymentToCompanyPan_Data:
+                Ac_Code = item.Ac_Code
+                PurchaseLegder = db.session.execute(
+                    text('''
+                        SELECT SUM(AMOUNT) AS AMOUNT
+                        FROM NT_1_GLEDGER
+                        WHERE COMPANY_CODE = :Company_Code
+                        AND DRCR = 'C'
+                        AND TRAN_TYPE IN ('PS', 'PR', 'RP')
+                        AND Ac_Code = :Ac_Code
+                        AND YEAR_CODE = :YEAR_CODE
+                    '''),
+                    {'Company_Code': Company_Code, 'Ac_Code': Ac_Code, 'YEAR_CODE': Year_Code}
+                )
+                PurchaseLegder_Data = PurchaseLegder.fetchone()
+                # print('PurchaseLegder_Data',float(PurchaseLegder_Data))
+                if PurchaseLegder_Data and PurchaseLegder_Data[0] is not None:
+            
+                    PSAmt += float(PurchaseLegder_Data[0] if PurchaseLegder_Data else 0)
+
+            SaleBillToCompanyPan = db.session.execute(
+                text('''
+                    SELECT CompanyPan
+                    FROM nt_1_accountmaster
+                    WHERE Company_Code = :Company_Code AND Ac_Code = :Payment_AC
+                '''),
+                {'Company_Code': Company_Code, 'Payment_AC': SalebilltoAc}
+            )
+            SaleBilltoCompanyPan_Data = SaleBillToCompanyPan.fetchone()
+            SaleBilltoPANNo=SaleBilltoCompanyPan_Data.CompanyPan
+
+            SaleLegderamt = db.session.execute(
+                    text('''
+                        SELECT SUM(AMOUNT) AS AMOUNT
+                        FROM qrygledger
+                        WHERE COMPANY_CODE = :Company_Code
+                        AND DRCR = 'D'
+                        AND TRAN_TYPE IN ('SB','LV','CV','RR','RS','RB','CB''GI')
+                        AND Ac_Code = :SalebilltoAc
+                        AND YEAR_CODE = :YEAR_CODE
+                         and companypan =:SaleBilltoPANNo
+                    '''),
+                    {'Company_Code': Company_Code, 'SalebilltoAc': SalebilltoAc, 'YEAR_CODE': Year_Code,'SaleBilltoPANNo':SaleBilltoPANNo}
+                )
+            SaleLegder_Data = SaleLegderamt.fetchone()
+            print('SaleBilltoPANNo',SaleBilltoPANNo)
+            print('SaleLegder_Data:', SaleLegder_Data.AMOUNT)
+            SBAmt = SaleLegder_Data[0] if SaleLegder_Data and SaleLegder_Data[0] is not None else 0
+        
+
+        # Fetch company parameters
+        company_parameters = fetch_company_parameters(Company_Code, Year_Code)
+        Balancelimt = company_parameters.BalanceLimit
+        PurchaseTDSRate=company_parameters.PurchaseTDSRate
+        TCSRate=company_parameters.TCSRate
+        SaleTDSRate=company_parameters.SaleTDSRate
+
+        
+        # Prepare response
+        response = {
+            "Balancelimt": Balancelimt,
+             "PSAmt": PSAmt,
+             "PurchaseTDSApplicable":PurchaseTDSApplicable_Data.TDSApplicable,
+             "SaleTDSApplicable_Data":SaleTDSApplicable_Data.TDSApplicable,
+             "SBAmt":SBAmt,
+             "PurchaseTDSRate":PurchaseTDSRate,
+             "TCSRate":TCSRate,
+             "SaleTDSRate":SaleTDSRate,
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.error("Traceback: %s", traceback.format_exc())
+        # Log the exception here if needed
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500    

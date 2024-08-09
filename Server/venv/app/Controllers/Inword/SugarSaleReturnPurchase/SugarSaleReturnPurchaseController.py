@@ -347,7 +347,7 @@ def create_sugarpurchasereturn():
 
         for item in detailData:
             item['doc_no'] = new_doc_no
-            item['Tran_Type'] = headData['Tran_Type']
+            item['Tran_Type'] = headData.get('Tran_Type', "PR")
             item['prid'] = new_head.prid
             if 'rowaction' in item and item['rowaction'] == "add":
                 del item['rowaction']
@@ -378,7 +378,11 @@ def create_sugarpurchasereturn():
         TDS_Amt = float(headData.get('TDS_Amt', 0) or 0)
         Other_Amt = float(headData.get('OTHER_Amt', 0) or 0)
 
+        print(company_code)
+
         company_parameters = fetch_company_parameters(company_code, year_code)
+
+        print("company_parameters",company_parameters)
 
         gledger_entries = []
 
@@ -457,6 +461,7 @@ def create_sugarpurchasereturn():
         }), 201
 
     except Exception as e:
+        print("Traceback",traceback.format_exc())
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
 
@@ -682,4 +687,30 @@ def delete_sugarpurchasereturn():
         # Roll back the transaction if any error occurs
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+    
+@app.route(API_URL + "/getNextDocNo_SugarPurchaseReturnHead", methods=["GET"])
+def getNextDocNo_SugarPurchaseReturnHead():
+    try:
+        Company_Code = request.args.get('Company_Code')
+        Year_Code = request.args.get('Year_Code')
+
+        if not all([Company_Code, Year_Code]):
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        # Fetch the maximum document number for the given Company_Code and Year_Code
+        max_doc_no = db.session.query(func.max(SugarPurchaseReturnHead.doc_no)).filter_by(Company_Code=Company_Code, Year_Code=Year_Code).scalar()
+
+        if max_doc_no is None:
+            next_doc_no = 1  
+        else:
+            next_doc_no = max_doc_no + 1  
+
+        response = {
+            "next_doc_no": next_doc_no
+        }
+        return jsonify(response), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 

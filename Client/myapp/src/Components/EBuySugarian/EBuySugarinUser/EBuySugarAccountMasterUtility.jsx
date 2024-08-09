@@ -104,18 +104,30 @@ function EBuySugarAccountMasterUtility() {
                     item.Ac_Code === post.Ac_Code ? { ...item, mapped: true } : item
                 ));
     
-                
+                // Navigate to the new route
+                navigate('/eBuySugarian-user-utility');
             } else {
                 console.error('Error inserting data:', response.data);
             }
-            // Navigate to the new route
-            navigate('/eBuySugarian-user-utility');
         } catch (error) {
-            console.error('Error:', error);
+            if (error.response && error.response.data && error.response.data.message) {
+                const errorMessage = error.response.data.message;
+    
+                // Check if the error message contains duplicate key information
+                if (errorMessage.includes("Violation of PRIMARY KEY constraint")) {
+                    console.error('Duplicate key error:', errorMessage);
+                    alert('Error: Duplicate accoid code. Please use a unique accoid code.');
+                } else {
+                    console.error('Error:', errorMessage);
+                    alert('An error occurred while inserting the data. Please try again.');
+                }
+            } else {
+                console.error('Error:', error);
+                alert('An unknown error occurred. Please try again.');
+            }
         }
     };
     
-
     const pageCount = Math.ceil(filteredData.length / perPage);
 
     const paginatedPosts = filteredData.slice((currentPage - 1) * perPage, currentPage * perPage);
@@ -141,7 +153,7 @@ function EBuySugarAccountMasterUtility() {
     };
 
     const handleNoClick = () => {
-        navigate(redirectPathNo);
+        navigate("/eBuySugarian-user-utility");
         handleCloseModal();
     };
 
