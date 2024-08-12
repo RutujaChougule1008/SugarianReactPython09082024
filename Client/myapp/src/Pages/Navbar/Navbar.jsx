@@ -223,7 +223,7 @@ const Navbar = () => {
               <a href="/cold-storage-inward">Cold Storage Inward</a>
             </div>
             <div className="submenu-item">
-              <a href="/sugar-sale-return-purchase">
+              <a href="/sugar-sale-return-purchase-utility">
                 Sugar Sale Return Purchase
               </a>
             </div>

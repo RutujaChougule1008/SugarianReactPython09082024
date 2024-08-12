@@ -170,3 +170,25 @@ textarea {
 .Heading{
   margin-bottom: -30px;
 }
+
+
+/* Validation */
+/* Add to your CSS file */
+/* Style for the form control when invalid */
+.SugarSaleReturnPurchase-form-control.is-invalid {
+  border-color: #dc3545; /* Red border for invalid input */
+  display: inline-flex; /* Display inline with flex */
+  align-items: center; /* Align items vertically */
+  flex-direction: row; /* Arrange items in a row */
+  white-space: row;
+}
+
+/* Style for the invalid feedback message */
+.invalid-feedback {
+  color: #dc3545; /* Red color for error message */
+  display: inline-flex; /* Display inline with flex */
+  align-items: center; /* Align items vertically */
+  flex-direction: row; /* Arrange items in a row */
+  margin-left: 0.5rem; /* Space between input and feedback */
+  white-space: row;
+}

@@ -610,3 +610,32 @@ def Stock_Entry_tender_purchase():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    
+
+@app.route(API_URL + "/getNextTenderNo_SugarTenderPurchase", methods=["GET"])
+def getNextTenderNo_SugarTenderPurchase():
+    try:
+        Company_Code = request.args.get('Company_Code')
+        Year_Code = request.args.get('Year_Code')
+
+        if not all([Company_Code, Year_Code]):
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        # Fetch the maximum document number for the given Company_Code and Year_Code
+        max_doc_no = db.session.query(func.max(TenderHead.Tender_No)).filter_by(Company_Code=Company_Code, Year_Code=Year_Code).scalar()
+
+        if max_doc_no is None:
+            next_doc_no = 1  
+        else:
+            next_doc_no = max_doc_no + 1  
+
+        response = {
+            "next_doc_no": next_doc_no
+        }
+        return jsonify(response), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
+

@@ -25,9 +25,59 @@ const stringToNumber = z
 
 // Validation Schemas
 const SugarSaleReturnPurchaseSchema = z.object({
-  //   texable_amount: stringToNumber.refine(value => value !== undefined && value >= 0),
-  //   bill_amount: stringToNumber.refine(value => value !== undefined && value >= 0),
-  //   TCS_Net_Payable: stringToNumber.refine(value => value !== undefined && value >= 0),
+  doc_no: z.string().optional(),
+  PURCNO: z.number().int().nonnegative(),
+  PurcTranType: z.string().optional(),
+  Tran_Type: z.string().default("PR"),
+  doc_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"), // Date in YYYY-MM-DD
+  Ac_Code: z.number().int().nonnegative(),
+  Unit_Code: z.number().int().nonnegative(),
+  mill_code: z.number().int().nonnegative(),
+  FROM_STATION: z.string().optional(),
+  TO_STATION: z.string().optional(),
+  LORRYNO: z.string().optional(),
+  BROKER: z.number().int().nonnegative(),
+  wearhouse: z.string().optional(),
+  subTotal: z.number().nonnegative(),
+  LESS_FRT_RATE: z.number().nonnegative(),
+  freight: z.number().nonnegative(),
+  cash_advance: z.number().nonnegative(),
+  bank_commission: z.number().nonnegative(),
+  OTHER_AMT: z.number().nonnegative(),
+  Bill_Amount: z.number().nonnegative(),
+  Due_Days: z.number().int().nonnegative(),
+  NETQNTL: z.number().nonnegative(),
+  Company_Code: z.string().optional(),
+  Year_Code: z.string().optional(),
+  Branch_Code: z.number().int().nonnegative(),
+  Created_By: z.string().optional(),
+  Modified_By: z.string().optional(),
+  Bill_No: z.string().optional(),
+  CGSTRate: z.number().nonnegative(),
+  CGSTAmount: z.number().nonnegative(),
+  SGSTRate: z.number().nonnegative(),
+  SGSTAmount: z.number().nonnegative(),
+  IGSTRate: z.number().nonnegative(),
+  IGSTAmount: z.number().nonnegative(),
+  GstRateCode: z.number().int().nonnegative(),
+  purcyearcode: z.string().optional(),
+  Bill_To: z.number().int().nonnegative(),
+  srid: z.number().int().nonnegative(),
+  ac: z.number().int().nonnegative(),
+  uc: z.number().int().nonnegative(),
+  mc: z.number().int().nonnegative(),
+  bc: z.number().int().nonnegative(),
+  bt: z.number().int().nonnegative(),
+  sbid: z.number().int().nonnegative(),
+  TCS_Rate: z.number().nonnegative(),
+  TCS_Amt: z.number().nonnegative(),
+  TCS_Net_Payable: z.number().nonnegative(),
+  einvoiceno: z.string().optional(),
+  ackno: z.string().optional(),
+  TDS_Rate: z.number().nonnegative(),
+  TDS_Amt: z.number().nonnegative(),
+  QRCode: z.string().optional(),
+  gstid: z.number().int().nonnegative(),
 });
 
 //Global Variables
@@ -47,8 +97,8 @@ var gstRateCode = "";
 var gstName = "";
 var billToName = "";
 var billToCode = "";
-
-
+var TYPE = "";
+var purchaseNo = "";
 
 const API_URL = process.env.REACT_APP_API;
 const companyCode = sessionStorage.getItem("Company_Code");
@@ -88,8 +138,8 @@ const SugarSaleReturnPurchase = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isChecked, setIsChecked] = useState(false);
   const [gstNo, setGstNo] = useState("");
-  const [purchNo,setPurchno] = useState("")
-  const [saleBillDataDetails,setSaleBillDataDetials] = useState({})
+  const [purchNo, setPurchno] = useState("");
+  const [saleBillDataDetails, setSaleBillDataDetials] = useState({});
   const [nextId, setNextId] = useState(1);
 
   //In utility page record doubleClicked that recod show for edit functionality
@@ -153,9 +203,8 @@ const SugarSaleReturnPurchase = () => {
     TDS_Rate: 0.0,
     TDS_Amt: 0.0,
     QRCode: "",
-    gstid: 0
-};
-
+    gstid: 0,
+  };
 
   const [formData, setFormData] = useState(initialFormData);
   const [billFrom, setBillFrom] = useState("");
@@ -172,11 +221,10 @@ const SugarSaleReturnPurchase = () => {
   const [broker, setBroker] = useState("");
   const [GstRate, setGstRate] = useState(0.0);
   const [matchStatus, setMatchStatus] = useState(null);
+  const [type, setType] = useState("");
 
   const handleChange = async (event) => {
     const { name, value } = event.target;
-
-    validateField(name, value);
 
     const matchStatus = await checkMatchStatus(
       formData.Ac_Code,
@@ -204,6 +252,7 @@ const SugarSaleReturnPurchase = () => {
     );
 
     setFormData(updatedFormData);
+    validateField(name, value);
   };
 
   const handleOnChange = () => {
@@ -237,30 +286,70 @@ const SugarSaleReturnPurchase = () => {
   // Validation Part
   const validateField = (name, value) => {
     try {
-      SugarSaleReturnPurchaseSchema.pick({ [name]: true }).parse({ [name]: value });
+      // Validate the field using the schema
+      SugarSaleReturnPurchaseSchema.pick({ [name]: true }).parse({
+        [name]: value,
+      });
+
+      // If validation passes, remove any existing error for the field
       setFormErrors((prevErrors) => {
         const updatedErrors = { ...prevErrors };
         delete updatedErrors[name];
         return updatedErrors;
       });
     } catch (err) {
+      let errorMessage = "Invalid input.";
+
+      // Check if the error is related to a number validation failure
+      if (err.errors && err.errors[0]?.code === "invalid_type") {
+        if (typeof value !== "number") {
+          errorMessage = "Only numbers accepted";
+        } else if (typeof value === "string") {
+          errorMessage = "Invalid text input";
+        }
+      } else if (err.errors && err.errors[0]?.message) {
+        // Use the schema-provided error message
+        errorMessage = err.errors[0].message;
+      }
+
+      // Set the custom or schema-provided error message
       setFormErrors((prevErrors) => ({
         ...prevErrors,
-        [name]: err.errors[0].message,
+        [name]: errorMessage,
       }));
     }
   };
 
   const validateForm = () => {
     try {
+      // Attempt to parse the formData against the schema
       SugarSaleReturnPurchaseSchema.parse(formData);
+
+      // If successful, clear any existing errors and return true
       setFormErrors({});
       return true;
     } catch (err) {
       const errors = {};
+
+      // Loop through all errors returned by the validation schema
       err.errors.forEach((error) => {
-        errors[error.path[0]] = error.message;
+        let errorMessage = error.message;
+
+        // Customize error message for specific types
+        if (error.code === "invalid_type") {
+          if (error.expected === "number") {
+            errorMessage = "Only numbers accepted";
+          } else if (error.expected === "string") {
+            errorMessage = "Only text is allowed";
+          }
+          // Add more conditions as needed for other types
+        }
+
+        // Assign the customized or default error message to the corresponding field
+        errors[error.path[0]] = errorMessage;
       });
+
+      // Update formErrors with the collected errors
       setFormErrors(errors);
       return false;
     }
@@ -277,8 +366,6 @@ const SugarSaleReturnPurchase = () => {
         return response.json();
       })
       .then((data) => {
-
-
         setFormData({
           doc_no: data.next_doc_no,
         });
@@ -329,71 +416,98 @@ const SugarSaleReturnPurchase = () => {
   const handleSaveOrUpdate = async () => {
     setIsEditing(true);
     setIsLoading(true);
-  
+
     const {
-      ASN_No, DO_No, Delivery_type, DoNarrtion, EWayBill_Chk, EWay_Bill_No,
-      EwayBillValidDate, Insured, IsDeleted, MillInvoiceNo, RateDiff, RoundOff,
-      newsbdate, newsbno, saleid, Purcid, SBNarration, TaxableAmount, Transport_Code,
-      saleidnew, bk, tc, ...filteredFormData
+      ASN_No,
+      DO_No,
+      Delivery_type,
+      DoNarrtion,
+      EWayBill_Chk,
+      EWay_Bill_No,
+      EwayBillValidDate,
+      Insured,
+      IsDeleted,
+      MillInvoiceNo,
+      RateDiff,
+      RoundOff,
+      newsbdate,
+      newsbno,
+      saleid,
+      Purcid,
+      SBNarration,
+      TaxableAmount,
+      Transport_Code,
+      saleidnew,
+      bk,
+      tc,
+      ...filteredFormData
     } = formData;
 
     console.log("formData before constructing headData:", formData);
 
-  
     const headData = {
-      ...filteredFormData,
       ...initialFormData,
-      ...formData,
+      ...filteredFormData,
+
       GstRateCode: gstCode || gstRateCode,
-    //   Company_Code: companyCode || saleBillDataDetails.Company_Code,
-    // Year_Code: Year_Code || saleBillDataDetails.Year_Code, 
-    // Tran_Type: "PR"
+      //   Company_Code: companyCode || saleBillDataDetails.Company_Code,
+      // Year_Code: Year_Code || saleBillDataDetails.Year_Code,
+      // Tran_Type: "PR"
     };
 
     console.log("headData:", headData);
 
-  
     if (isEditMode) {
       delete headData.prid;
     }
-  
+
     console.log("Users state before API call:", users);
-  
+
     const detailData = users.map((user) => {
-      const isNew = !user.detail_id;
+      const isNew = !user.detail_id; // If there's no detail_id, it's a new entry
+      console.log("Mapping user:", user, "isNew:", isNew); // Log each user and whether it's new
+
       return {
         rowaction: isNew ? "add" : user.rowaction || "Normal",
-        prdid: user.prdid ,
+        prdid: user.prdid,
         item_code: user.item_code,
         Quantal: parseFloat(user.Quantal) || 0,
         ic: user.ic,
-        detail_id: isNew ? (Math.max(...(users.map(u => u.detail_id || 0))) || 0) + 1 : user.detail_id,
+        detail_id: isNew
+          ? (Math.max(...users.map((u) => u.detail_id || 0)) || 0) + 1
+          : user.detail_id,
         Company_Code: companyCode,
         Year_Code: Year_Code,
         Tran_Type: user.Tran_Type || "PR",
         narration: user.narration || "",
-        packing: user.packing || 0.00,
-        bags: user.bags || 0.00,
-        rate: parseFloat(user.rate) || 0.00,
-        item_Amount: parseFloat(user.item_Amount) || 0.00,
-        Branch_Code: user.Branch_Code || null
+        packing: user.packing || 0.0,
+        bags: user.bags || 0.0,
+        rate: parseFloat(user.rate) || 0.0,
+        item_Amount: parseFloat(user.item_Amount) || 0.0,
+        Branch_Code: user.Branch_Code || null,
       };
     });
-  
+
     const requestData = {
       headData,
       detailData,
     };
-  
+
     console.log("Request Data:", requestData);
-  
+
     try {
       if (isEditMode) {
         const updateApiUrl = `${API_URL}/update-sugarpurchasereturn?prid=${newPrid}`;
         const response = await axios.put(updateApiUrl, requestData);
         toast.success("Data updated successfully!");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
-        const response = await axios.post(`${API_URL}/create-sugarpurchasereturn`, requestData);
+        const response = await axios.post(
+          `${API_URL}/create-sugarpurchasereturn`,
+          requestData
+        );
         toast.success("Data saved successfully!");
         setIsEditMode(false);
         setAddOneButtonEnabled(true);
@@ -403,16 +517,21 @@ const SugarSaleReturnPurchase = () => {
         setSaveButtonEnabled(false);
         setCancelButtonEnabled(false);
         setIsEditing(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     } catch (error) {
-      console.error("Error during API call:", error.response ? error.response.data : error.message);
+      console.error(
+        "Error during API call:",
+        error.response ? error.response.data : error.message
+      );
       toast.error("Error occurred while saving data");
     } finally {
       setIsEditing(false);
       setIsLoading(false);
     }
   };
-  
 
   const handleDelete = async () => {
     const isConfirmed = window.confirm(
@@ -429,7 +548,7 @@ const SugarSaleReturnPurchase = () => {
       setIsLoading(true);
 
       try {
-        const deleteApiUrl = `${API_URL}/delete_data_by_saleid?saleid=${newPrid}&Company_Code=${companyCode}&doc_no=${formData.doc_no}&Year_Code=${Year_Code}`;
+        const deleteApiUrl = `${API_URL}/delete-sugarpurchasereturn?prid=${newPrid}&Company_Code=${companyCode}&doc_no=${formData.doc_no}&Year_Code=${Year_Code}&tran_type=${formData.Tran_Type}`;
         const response = await axios.delete(deleteApiUrl);
 
         if (response.status === 200) {
@@ -462,44 +581,64 @@ const SugarSaleReturnPurchase = () => {
     setSaveButtonEnabled(false);
     setCancelButtonEnabled(false);
     setCancelButtonClicked(true);
-  
+
     try {
       const response = await axios.get(
         `${API_URL}/get-last-sugarpurchasereturn?Company_Code=${companyCode}&Year_Code=${Year_Code}`
       );
+
       if (response.status === 200) {
         const data = response.data;
-        console.log("LastData", data);
-  
-        // Extracting data
+        console.log("Full Response Data:", data);
+
         const { last_head_data, detail_data, last_labels_data } = data;
-        const firstDetail = detail_data;
-        const labels = last_labels_data[0]
-  
-        // Updating variables
+
+        // Ensure detail_data is an array
+        const detailsArray = Array.isArray(detail_data) ? detail_data : [];
+
         newPrid = last_head_data.prid;
-        partyName = labels.partyname;
+        purchaseNo = last_head_data.PURCNO;
+        partyName = last_labels_data[0].partyname;
         partyCode = last_head_data.Ac_Code;
-        unitName = labels.unitname;
+        unitName = last_labels_data[0].unitname;
         unitCode = last_head_data.Unit_Code;
-        billToName = labels.billtoname;
+        billToName = last_labels_data[0].billtoname;
         billToCode = last_head_data.Bill_To;
         gstRateCode = last_head_data.GstRateCode;
-        gstName = labels.GSTName;
-        millName = labels.millname;
+        gstName = last_labels_data[0].GSTName;
+        millName = last_labels_data[0].millname;
         millCode = last_head_data.mill_code;
-        itemName = labels.itemname;
-        item_Code = firstDetail.item_code;
+        itemName = last_labels_data[0].itemname;
+        item_Code = detail_data.item_code;
         brokerCode = last_head_data.BROKER;
-        brokerName = labels.brokername;
-  
+        brokerName = last_labels_data[0].brokername;
+
+        // Create a mapping for itemname based on item_code
+        const itemNameMap = last_labels_data.reduce((map, label) => {
+          if (label.item_code !== undefined && label.itemname) {
+            map[label.item_code] = label.itemname;
+          }
+          return map;
+        }, {});
+
+        // Enrich detail_data with itemname
+        const enrichedDetails = detailsArray.map((detail) => ({
+          ...detail,
+          itemname: itemNameMap[detail.item_code] || "Unknown Item",
+        }));
+
+        // Log enriched details
+        console.log("Enriched Details:", enrichedDetails);
+
         // Updating state
         setFormData((prevData) => ({
           ...prevData,
           ...last_head_data,
         }));
         setLastTenderData(last_head_data || {});
-        setLastTenderDetails(firstDetail || labels || []);
+        setLastTenderDetails(enrichedDetails);
+        setType(last_head_data.Tran_Type);
+        console.log("TYPE", last_head_data.Tran_Type);
       } else {
         console.error(
           "Failed to fetch last data:",
@@ -511,41 +650,63 @@ const SugarSaleReturnPurchase = () => {
       console.error("Error during API call:", error);
     }
   };
-  
 
   const handleBack = () => {
-    navigate("/SaleBill-utility");
+    navigate("/sugar-sale-return-purchase-utility");
   };
 
   const handleFirstButtonClick = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/get-firstSaleBill-navigation?Company_Code=${companyCode}&Year_Code=${Year_Code}`
+        `${API_URL}/get-first-sugarpurchasereturn?Company_Code=${companyCode}&Year_Code=${Year_Code}`
       );
       if (response.status === 200) {
         const data = response.data;
-        newPrid = data.first_head_data.saleid;
-        partyName = data.first_details_data[0].partyname;
-        partyCode = data.first_head_data.Ac_Code;
-        unitName = data.first_details_data[0].unitname;
-        unitCode = data.first_details_data[0].unitaccode;
-        billToName = data.first_details_data[0].billtoname;
-        billToCode = data.first_head_data.Bill_To;
-        gstrate = data.first_details_data[0].gstrate;
-        gstRateCode = data.first_head_data.GstRateCode;
-        millName = data.first_details_data[0].millname;
-        millCode = data.first_head_data.mill_code;
-        itemName = data.first_details_data[0].itemname;
-        item_Code = data.first_details_data[0].System_Code;
-        brokerCode = data.first_details_data[0].brokeraccode;
-        brokerName = data.first_details_data[0].brokername;
-        setFormData((prevData) => ({
-          ...prevData,
-          ...data.first_head_data,
+        const { last_head_data, detail_data, last_labels_data } = data;
+
+        // Ensure detail_data is an array
+        const detailsArray = Array.isArray(detail_data) ? detail_data : [];
+
+        newPrid = last_head_data.prid;
+        partyName = last_labels_data[0].partyname;
+        partyCode = last_head_data.Ac_Code;
+        unitName = last_labels_data[0].unitname;
+        unitCode = last_head_data.Unit_Code;
+        billToName = last_labels_data[0].billtoname;
+        billToCode = last_head_data.Bill_To;
+        gstRateCode = last_head_data.GstRateCode;
+        gstName = last_labels_data[0].GSTName;
+        millName = last_labels_data[0].millname;
+        millCode = last_head_data.mill_code;
+        itemName = last_labels_data[0].itemname;
+        item_Code = detail_data.item_code;
+        brokerCode = last_head_data.BROKER;
+        brokerName = last_labels_data[0].brokername;
+
+        // Create a mapping for itemname based on item_code
+        const itemNameMap = last_labels_data.reduce((map, label) => {
+          if (label.item_code !== undefined && label.itemname) {
+            map[label.item_code] = label.itemname;
+          }
+          return map;
+        }, {});
+
+        // Enrich detail_data with itemname
+        const enrichedDetails = detailsArray.map((detail) => ({
+          ...detail,
+          itemname: itemNameMap[detail.item_code] || "Unknown Item",
         }));
 
-        setLastTenderData(data.first_head_data || {});
-        setLastTenderDetails(data.first_details_data || []);
+        // Log enriched details
+        console.log("Enriched Details:", enrichedDetails);
+
+        // Updating state
+        setFormData((prevData) => ({
+          ...prevData,
+          ...last_head_data,
+        }));
+        setLastTenderData(last_head_data || {});
+        setLastTenderDetails(enrichedDetails);
       } else {
         console.error(
           "Failed to fetch first tender data:",
@@ -558,80 +719,58 @@ const SugarSaleReturnPurchase = () => {
     }
   };
 
-  const handleLastButtonClick = async () => {
-    try {
-      const response = await axios.get(
-        `${API_URL}/get-lastSaleBill-navigation?Company_Code=${companyCode}&Year_Code=${Year_Code}`
-      );
-      if (response.status === 200) {
-        const data = response.data;
-        newPrid = data.last_head_data.saleid;
-        partyName = data.last_details_data[0].partyname;
-        partyCode = data.last_head_data.Ac_Code;
-        unitName = data.last_details_data[0].unitname;
-        unitCode = data.last_details_data[0].unitaccode;
-        billToName = data.last_details_data[0].billtoname;
-        billToCode = data.last_head_data.Bill_To;
-        gstrate = data.last_details_data[0].gstrate;
-        gstRateCode = data.last_head_data.GstRateCode;
-        millName = data.last_details_data[0].millname;
-        millCode = data.last_head_data.mill_code;
-        itemName = data.last_details_data[0].itemname;
-        item_Code = data.last_details_data[0].System_Code;
-        
-        brokerCode = data.last_details_data[0].brokeraccode;
-        brokerName = data.last_details_data[0].brokername;
-        
-        setFormData((prevData) => ({
-          ...prevData,
-          ...data.last_head_data,
-        }));
-
-        setLastTenderData(data.last_head_data || {});
-        setLastTenderDetails(data.last_details_data || []);
-      } else {
-        console.error(
-          "Failed to fetch last tender data:",
-          response.status,
-          response.statusText
-        );
-      }
-    } catch (error) {
-      console.error("Error during API call:", error);
-    }
-  };
-
   const handleNextButtonClick = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/get-nextSaleBill-navigation?Company_Code=${companyCode}&Year_Code=${Year_Code}&currentDocNo=${formData.doc_no}`
+        `${API_URL}/get-next-sugarpurchasereturn?Company_Code=${companyCode}&Year_Code=${Year_Code}&doc_no=${formData.doc_no}`
       );
       if (response.status === 200) {
         const data = response.data;
-        newPrid = data.next_head_data.saleid;
-        partyName = data.next_details_data[0].partyname;
-        partyCode = data.next_head_data.Ac_Code;
-        unitName = data.next_details_data[0].unitname;
-        unitCode = data.next_details_data[0].unitaccode;
-        billToName = data.next_details_data[0].billtoname;
-        billToCode = data.next_head_data.Bill_To;
-        gstrate = data.next_details_data[0].gstrate;
-        gstRateCode = data.next_head_data.GstRateCode;
-        millName = data.next_details_data[0].millname;
-        millCode = data.next_head_data.mill_code;
-        itemName = data.next_details_data[0].itemname;
-        item_Code = data.next_details_data[0].System_Code;
-        
-        brokerCode = data.next_details_data[0].brokeraccode;
-        brokerName = data.next_details_data[0].brokername;
-       
-        setFormData((prevData) => ({
-          ...prevData,
-          ...data.next_head_data,
+        const { last_head_data, detail_data, last_labels_data } = data;
+
+        // Ensure detail_data is an array
+        const detailsArray = Array.isArray(detail_data) ? detail_data : [];
+
+        newPrid = last_head_data.prid;
+        partyName = last_labels_data[0].partyname;
+        partyCode = last_head_data.Ac_Code;
+        unitName = last_labels_data[0].unitname;
+        unitCode = last_head_data.Unit_Code;
+        billToName = last_labels_data[0].billtoname;
+        billToCode = last_head_data.Bill_To;
+        gstRateCode = last_head_data.GstRateCode;
+        gstName = last_labels_data[0].GSTName;
+        millName = last_labels_data[0].millname;
+        millCode = last_head_data.mill_code;
+        itemName = last_labels_data[0].itemname;
+        item_Code = detail_data.item_code;
+        brokerCode = last_head_data.BROKER;
+        brokerName = last_labels_data[0].brokername;
+
+        // Create a mapping for itemname based on item_code
+        const itemNameMap = last_labels_data.reduce((map, label) => {
+          if (label.item_code !== undefined && label.itemname) {
+            map[label.item_code] = label.itemname;
+          }
+          return map;
+        }, {});
+
+        // Enrich detail_data with itemname
+        const enrichedDetails = detailsArray.map((detail) => ({
+          ...detail,
+          itemname: itemNameMap[detail.item_code] || "Unknown Item",
         }));
 
-        setLastTenderData(data.next_head_data || {});
-        setLastTenderDetails(data.next_details_data || []);
+        // Log enriched details
+        console.log("Enriched Details:", enrichedDetails);
+
+        // Updating state
+        setFormData((prevData) => ({
+          ...prevData,
+          ...last_head_data,
+        }));
+        setLastTenderData(last_head_data || {});
+        setLastTenderDetails(enrichedDetails);
       } else {
         console.error(
           "Failed to fetch next tender data:",
@@ -647,34 +786,56 @@ const SugarSaleReturnPurchase = () => {
   const handlePreviousButtonClick = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/get-previousSaleBill-navigation?Company_Code=${companyCode}&Year_Code=${Year_Code}&currentDocNo=${formData.doc_no}`
+        `${API_URL}/get-previous-sugarpurchasereturn?Company_Code=${companyCode}&Year_Code=${Year_Code}&doc_no=${formData.doc_no}`
       );
 
       if (response.status === 200) {
         const data = response.data;
-        newPrid = data.previous_head_data.saleid;
-        partyName = data.previous_details_data[0].partyname;
-        partyCode = data.previous_head_data.Ac_Code;
-        unitName = data.previous_details_data[0].unitname;
-        unitCode = data.previous_details_data[0].unitaccode;
-        billToName = data.previous_details_data[0].billtoname;
-        billToCode = data.previous_head_data.Bill_To;
-        gstrate = data.previous_details_data[0].gstrate;
-        gstRateCode = data.previous_head_data.GstRateCode;
-        millName = data.previous_details_data[0].millname;
-        millCode = data.previous_head_data.mill_code;
-        itemName = data.previous_details_data[0].itemname;
-        item_Code = data.previous_details_data[0].System_Code;
-        
-        brokerCode = data.previous_details_data[0].brokeraccode;
-        brokerName = data.previous_details_data[0].brokername;
-        
+        const { last_head_data, detail_data, last_labels_data } = data;
+
+        // Ensure detail_data is an array
+        const detailsArray = Array.isArray(detail_data) ? detail_data : [];
+
+        newPrid = last_head_data.prid;
+        partyName = last_labels_data[0].partyname;
+        partyCode = last_head_data.Ac_Code;
+        unitName = last_labels_data[0].unitname;
+        unitCode = last_head_data.Unit_Code;
+        billToName = last_labels_data[0].billtoname;
+        billToCode = last_head_data.Bill_To;
+        gstRateCode = last_head_data.GstRateCode;
+        gstName = last_labels_data[0].GSTName;
+        millName = last_labels_data[0].millname;
+        millCode = last_head_data.mill_code;
+        itemName = last_labels_data[0].itemname;
+        item_Code = detail_data.item_code;
+        brokerCode = last_head_data.BROKER;
+        brokerName = last_labels_data[0].brokername;
+
+        // Create a mapping for itemname based on item_code
+        const itemNameMap = last_labels_data.reduce((map, label) => {
+          if (label.item_code !== undefined && label.itemname) {
+            map[label.item_code] = label.itemname;
+          }
+          return map;
+        }, {});
+
+        // Enrich detail_data with itemname
+        const enrichedDetails = detailsArray.map((detail) => ({
+          ...detail,
+          itemname: itemNameMap[detail.item_code] || "Unknown Item",
+        }));
+
+        // Log enriched details
+        console.log("Enriched Details:", enrichedDetails);
+
+        // Updating state
         setFormData((prevData) => ({
           ...prevData,
-          ...data.previous_head_data,
+          ...last_head_data,
         }));
-        setLastTenderData(data.previous_head_data || {});
-        setLastTenderDetails(data.previous_details_data || []);
+        setLastTenderData(last_head_data || {});
+        setLastTenderDetails(enrichedDetails);
       } else {
         console.error(
           "Failed to fetch previous tender data:",
@@ -710,36 +871,57 @@ const SugarSaleReturnPurchase = () => {
     setCancelButtonEnabled(false);
     setCancelButtonClicked(true);
     try {
+      console.log(selectedRecord);
       const response = await axios.get(
-        `${API_URL}/SaleBillByid?doc_no=${selectedRecord.doc_no}&Company_Code=${companyCode}&Year_Code=${Year_Code}`
+        `${API_URL}/get-sugarpurchasereturn-by-id?doc_no=${selectedRecord.returnPurchaseData.doc_no}&Company_Code=${companyCode}&Year_Code=${Year_Code}`
       );
       if (response.status === 200) {
         const data = response.data;
+        const { last_head_data, detail_data, last_labels_data } = data;
 
-        newPrid = data.last_head_data.saleid;
-        partyName = data.last_details_data[0].partyname;
-        partyCode = data.last_head_data.Ac_Code;
-        unitName = data.last_details_data[0].unitname;
-        unitCode = data.last_details_data[0].unitaccode;
-        billToName = data.last_details_data[0].billtoname;
-        billToCode = data.last_head_data.Bill_To;
-        gstrate = data.last_details_data[0].gstrate;
-        gstRateCode = data.last_head_data.GstRateCode;
-        millName = data.last_details_data[0].millname;
-        millCode = data.last_head_data.mill_code;
-        itemName = data.last_details_data[0].itemname;
-        item_Code = data.last_details_data[0].System_Code;
-        
-        brokerCode = data.last_details_data[0].brokeraccode;
-        brokerName = data.last_details_data[0].brokername;
-        
-       
+        // Ensure detail_data is an array
+        const detailsArray = Array.isArray(detail_data) ? detail_data : [];
+
+        newPrid = last_head_data.prid;
+        partyName = last_labels_data[0].partyname;
+        partyCode = last_head_data.Ac_Code;
+        unitName = last_labels_data[0].unitname;
+        unitCode = last_head_data.Unit_Code;
+        billToName = last_labels_data[0].billtoname;
+        billToCode = last_head_data.Bill_To;
+        gstRateCode = last_head_data.GstRateCode;
+        gstName = last_labels_data[0].GSTName;
+        millName = last_labels_data[0].millname;
+        millCode = last_head_data.mill_code;
+        itemName = last_labels_data[0].itemname;
+        item_Code = detail_data.item_code;
+        brokerCode = last_head_data.BROKER;
+        brokerName = last_labels_data[0].brokername;
+
+        // Create a mapping for itemname based on item_code
+        const itemNameMap = last_labels_data.reduce((map, label) => {
+          if (label.item_code !== undefined && label.itemname) {
+            map[label.item_code] = label.itemname;
+          }
+          return map;
+        }, {});
+
+        // Enrich detail_data with itemname
+        const enrichedDetails = detailsArray.map((detail) => ({
+          ...detail,
+          itemname: itemNameMap[detail.item_code] || "Unknown Item",
+        }));
+
+        // Log enriched details
+        console.log("Enriched Details:", enrichedDetails);
+
+        // Updating state
         setFormData((prevData) => ({
           ...prevData,
-          ...data.last_head_data,
+          ...last_head_data,
         }));
-        setLastTenderData(data.last_head_data || {});
-        setLastTenderDetails(data.last_details_data || []);
+        setLastTenderData(last_head_data || {});
+        setLastTenderDetails(enrichedDetails);
       } else {
         console.error(
           "Failed to fetch last tender data:",
@@ -757,32 +939,54 @@ const SugarSaleReturnPurchase = () => {
       const changeNoValue = event.target.value;
       try {
         const response = await axios.get(
-          `${API_URL}/SaleBillByid?doc_no=${changeNoValue}&Company_Code=${companyCode}&Year_Code=${Year_Code}`
+          `${API_URL}/get-sugarpurchasereturn-by-id?doc_no=${changeNoValue}&Company_Code=${companyCode}&Year_Code=${Year_Code}`
         );
         const data = response.data;
-        newPrid = data.last_head_data.saleid;
-        partyName = data.last_details_data[0].partyname;
-        partyCode = data.last_head_data.Ac_Code;
-        unitName = data.last_details_data[0].unitname;
-        unitCode = data.last_details_data[0].unitaccode;
-        billToName = data.last_details_data[0].billtoname;
-        billToCode = data.last_head_data.Bill_To;
-        gstrate = data.last_details_data[0].gstrate;
-        gstRateCode = data.last_head_data.GstRateCode;
-        millName = data.last_details_data[0].millname;
-        millCode = data.last_head_data.mill_code;
-        itemName = data.last_details_data[0].itemname;
-        item_Code = data.last_details_data[0].System_Code;
-        
-        brokerCode = data.last_details_data[0].brokeraccode;
-        brokerName = data.last_details_data[0].brokername;
-        
-        setFormData({
-          ...formData,
-          ...data.last_head_data,
-        });
-        setLastTenderData(data.last_head_data || {});
-        setLastTenderDetails(data.last.details.data || []);
+        const { last_head_data, detail_data, last_labels_data } = data;
+
+        // Ensure detail_data is an array
+        const detailsArray = Array.isArray(detail_data) ? detail_data : [];
+
+        newPrid = last_head_data.prid;
+        partyName = last_labels_data[0].partyname;
+        partyCode = last_head_data.Ac_Code;
+        unitName = last_labels_data[0].unitname;
+        unitCode = last_head_data.Unit_Code;
+        billToName = last_labels_data[0].billtoname;
+        billToCode = last_head_data.Bill_To;
+        gstRateCode = last_head_data.GstRateCode;
+        gstName = last_labels_data[0].GSTName;
+        millName = last_labels_data[0].millname;
+        millCode = last_head_data.mill_code;
+        itemName = last_labels_data[0].itemname;
+        item_Code = detail_data.item_code;
+        brokerCode = last_head_data.BROKER;
+        brokerName = last_labels_data[0].brokername;
+
+        // Create a mapping for itemname based on item_code
+        const itemNameMap = last_labels_data.reduce((map, label) => {
+          if (label.item_code !== undefined && label.itemname) {
+            map[label.item_code] = label.itemname;
+          }
+          return map;
+        }, {});
+
+        // Enrich detail_data with itemname
+        const enrichedDetails = detailsArray.map((detail) => ({
+          ...detail,
+          itemname: itemNameMap[detail.item_code] || "Unknown Item",
+        }));
+
+        // Log enriched details
+        console.log("Enriched Details:", enrichedDetails);
+
+        // Updating state
+        setFormData((prevData) => ({
+          ...prevData,
+          ...last_head_data,
+        }));
+        setLastTenderData(last_head_data || {});
+        setLastTenderDetails(enrichedDetails);
         setIsEditing(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -848,29 +1052,35 @@ const SugarSaleReturnPurchase = () => {
     matchStatus,
     gstRate
   ) => {
+    // Clone the formData and update the specific field
     const updatedFormData = { ...formData, [name]: input };
+
+    // Parsing and handling potential NaN values by defaulting to 0
     const subtotal = parseFloat(updatedFormData.subTotal) || 0.0;
-
-    const rate = gstRate;
-
+    const rate = parseFloat(gstRate) || 0.0;
     const netQntl = parseFloat(updatedFormData.NETQNTL) || 0.0;
     const freightRate = parseFloat(updatedFormData.LESS_FRT_RATE) || 0.0;
+    const miscAmount = parseFloat(updatedFormData.OTHER_AMT) || 0.0;
+    const cashAdvance = parseFloat(updatedFormData.cash_advance) || 0.0;
+    const bankCommission = parseFloat(updatedFormData.bank_commission) || 0.0;
+    const tcsRate = parseFloat(updatedFormData.TCS_Rate) || 0.0;
+    const tdsRate = parseFloat(updatedFormData.TDS_Rate) || 0.0;
 
-    updatedFormData.freight = netQntl * freightRate;
+    // Calculating freight
+    updatedFormData.freight = (netQntl * freightRate).toFixed(2);
 
-    //  updatedFormData.Bill_Amount = updatedFormData.freight + subtotal;
-
+    // Setting GST rates and amounts based on matchStatus
     if (matchStatus === "TRUE") {
       updatedFormData.CGSTRate = (rate / 2).toFixed(2);
       updatedFormData.SGSTRate = (rate / 2).toFixed(2);
       updatedFormData.IGSTRate = 0.0;
 
       updatedFormData.CGSTAmount = (
-        (updatedFormData.subTotal * updatedFormData.CGSTRate) /
+        (subtotal * parseFloat(updatedFormData.CGSTRate)) /
         100
       ).toFixed(2);
       updatedFormData.SGSTAmount = (
-        (updatedFormData.subTotal * updatedFormData.SGSTRate) /
+        (subtotal * parseFloat(updatedFormData.SGSTRate)) /
         100
       ).toFixed(2);
       updatedFormData.IGSTAmount = 0.0;
@@ -880,137 +1090,148 @@ const SugarSaleReturnPurchase = () => {
       updatedFormData.SGSTRate = 0.0;
 
       updatedFormData.IGSTAmount = (
-        (updatedFormData.subTotal * updatedFormData.IGSTRate) /
+        (subtotal * parseFloat(updatedFormData.IGSTRate)) /
         100
       ).toFixed(2);
       updatedFormData.CGSTAmount = 0.0;
       updatedFormData.SGSTAmount = 0.0;
     }
 
-
-
-    const miscAmount = parseFloat(updatedFormData.OTHER_AMT) || 0.0;
-    const cashAdvance = parseFloat(updatedFormData.cash_advance) || 0.0;
-    const bankCommission = parseFloat(updatedFormData.bank_commission) || 0.0;
+    // Calculating the Bill Amount
     updatedFormData.Bill_Amount = (
-      updatedFormData.subTotal +
+      subtotal +
       parseFloat(updatedFormData.CGSTAmount) +
       parseFloat(updatedFormData.SGSTAmount) +
       parseFloat(updatedFormData.IGSTAmount) +
       miscAmount +
-      updatedFormData.freight +
+      parseFloat(updatedFormData.freight) +
       bankCommission +
       cashAdvance
-  
     ).toFixed(2);
 
-    const tcsRate = parseFloat(updatedFormData.TCS_Rate) || 0.0;
+    // Calculating TCS and Net Payable
     updatedFormData.TCS_Amt = (
-      (updatedFormData.Bill_Amount * tcsRate) /
+      (parseFloat(updatedFormData.Bill_Amount) * tcsRate) /
       100
     ).toFixed(2);
+
     updatedFormData.TCS_Net_Payable = (
       parseFloat(updatedFormData.Bill_Amount) +
       parseFloat(updatedFormData.TCS_Amt)
     ).toFixed(2);
 
-    const tdsRate = parseFloat(updatedFormData.TDS_Rate) || 0.0;
-    updatedFormData.TDS_Amt = (
-      (updatedFormData.subTotal * tdsRate) /
-      100
-    ).toFixed(2);
+    // Calculating TDS
+    updatedFormData.TDS_Amt = ((subtotal * tdsRate) / 100).toFixed(2);
 
     return updatedFormData;
   };
 
   const saleBillHeadData = (data) => {
-    console.log(data)
+    console.log(data);
 
-        partyCode = data.Ac_Code;
-        
-        unitCode = data.Unit_Code;
-        
-        billToCode = data.Bill_To;
-        gstRateCode = data.GstRateCode;
-       
-        millCode = data.mill_code;
-        
-        
-        brokerCode = data.BROKER;
-        
+    partyCode = data.Ac_Code;
 
-    
-        
+    unitCode = data.Unit_Code;
+
+    billToCode = data.Bill_To;
+    gstRateCode = data.GstRateCode;
+
+    millCode = data.mill_code;
+
+    brokerCode = data.BROKER;
+
     setFormData((prevData) => {
-      const { doc_no, ...remainingData } = data;
+      const { doc_no, doc_date, ...remainingData } = data;
       return {
         bc: data.bk,
         ...prevData,
+
         ...remainingData,
       };
     });
-        setLastTenderData(data || {});
-        setLastTenderDetails(data.last_details_data || [])
-
-
-  }
+    setLastTenderData(data || {});
+    setLastTenderDetails(data.last_details_data || []);
+  };
 
   const saleBillDetailData = (details) => {
     console.log("Sale Bill Details Received:", details);
 
-    // Determine if the item is new or existing
     partyName = details.partyname;
-        
-        unitName = details.unitname;
-        
-        billToName = details.billtoname;
-        
-        gstName = details.GSTName;
-        millName = details.millname;
-        
-        itemName = details.itemname;
-        
-        
-        brokerName = details.brokername;
 
+    unitName = details.unitname;
 
-    const isExisting = users.some(user => user.detail_id === details.id);
+    billToName = details.billtoname;
 
+    gstName = details.GSTName;
+    millName = details.millname;
+
+    itemName = details.itemname;
+
+    brokerName = details.brokername;
+
+    // Extract existing detail_ids
+    const existingDetailIds = users
+      .map((user) => user.detail_id)
+      .filter((id) => id != null);
+
+    // Determine if the detail is new or existing based on `detail_id`
+    const isExisting = users.some(
+      (user) => user.detail_id === details.detail_id
+    );
+
+    // Log whether the item is considered existing or not
+    console.log("Is Existing:", isExisting);
+
+    // Determine the new detail_id only if the item is new
+    const newDetailId =
+      existingDetailIds.length > 0 ? Math.max(...existingDetailIds) + 1 : 1;
+
+    // Create new or updated detail data
     const newDetailData = {
-        item_code: details.item_code,
-        item_Name: details.itemname,
-        id: users.length > 0 ? Math.max(...users.map((user) => user.id)) + 1 : 1,
-        ic: details.ic,
-        narration: details.narration || "",
-        Quantal: parseFloat(details.Quantal) || 0,
-        bags: details.bags || 0,
-        packing: details.packing || 0,
-        rate: parseFloat(details.rate) || 0,
-        item_Amount: parseFloat(details.item_Amount) || 0,
-        detail_id: details.id || null,
-        rowaction: isExisting ? "update" : "add", // Set action based on existence
+      item_code: details.item_code || 0,
+      itemname: details.itemname || "Unknown Item",
+      id:
+        details.id ||
+        (users.length > 0
+          ? Math.max(...users.map((user) => user.id || 0)) + 1
+          : 1),
+      ic: details.ic || 0,
+      narration: details.narration || "",
+      Quantal: parseFloat(details.Quantal) || 0,
+      bags: details.bags || 0,
+      packing: details.packing || 0,
+      rate: parseFloat(details.rate) || 0,
+      item_Amount: parseFloat(details.item_Amount) || 0,
+      detail_id: isExisting ? details.detail_id : newDetailId, // Use existing detail_id if updating, else newDetailId
+      rowaction: isExisting ? "update" : "add", // Determine action
+      prdid: isExisting ? details.prdid : undefined,
     };
 
+    // Log new detail data before state update
     console.log("New Detail Data Before State Update:", newDetailData);
 
-    // Update or add to users state
-    const updatedUsers = isExisting 
-        ? users.map(user => user.detail_id === details.id ? newDetailData : user)
-        : [...users, newDetailData];
+    // Update or add to `users` state
+    const updatedUsers = isExisting
+      ? users.map((user) =>
+          user.detail_id === details.detail_id ? newDetailData : user
+        )
+      : [...users, newDetailData];
 
+    console.log("Updated Users State Before setUsers:", updatedUsers);
+
+    // Update state with new users list
     setUsers(updatedUsers);
-
     setLastTenderDetails(updatedUsers || []);
-};
+  };
 
   useEffect(() => {
     if (selectedRecord) {
       setUsers(
         lastTenderDetails.map((detail) => ({
           item_code: detail.item_code,
-          item_Name: detail.item_Name || itemName,
+          item_Name: detail.item_Name,
           rowaction: "Normal",
-          
+
           ic: detail.ic,
           id: detail.prdid,
           prdid: detail.prdid,
@@ -1020,7 +1241,7 @@ const SugarSaleReturnPurchase = () => {
           packing: detail.packing,
           rate: detail.rate,
           item_Amount: detail.item_Amount,
-          detail_id: detail.prdid
+          detail_id: detail.prdid,
         }))
       );
     }
@@ -1028,9 +1249,6 @@ const SugarSaleReturnPurchase = () => {
 
   useEffect(() => {
     const updatedUsers = lastTenderDetails.map((detail) => ({
-      
-      
-      
       id: detail.prdid,
       prdid: detail.prdid,
       narration: detail.narration,
@@ -1039,14 +1257,14 @@ const SugarSaleReturnPurchase = () => {
       packing: detail.packing,
       rate: detail.rate,
       item_Amount: detail.item_Amount,
-      item_code: detail.item_code ,
-      item_Name: detail.item_Name || itemName,
+      item_code: detail.item_code,
+      item_Name: detail.itemname,
       ic: detail.ic,
       rowaction: "Normal",
-      detail_id: detail.prdid
-      
+      detail_id: detail.prdid,
     }));
     setUsers(updatedUsers);
+    console.log(lastTenderDetails);
   }, [lastTenderDetails]);
 
   const calculateDetails = (quantal, packing, rate) => {
@@ -1088,7 +1306,7 @@ const SugarSaleReturnPurchase = () => {
       item_code: itemCode,
       item_Name: item_Name,
       ic: itemCodeAccoid,
-      
+
       ...formDataDetail,
       rowaction: "add",
     };
@@ -1139,7 +1357,7 @@ const SugarSaleReturnPurchase = () => {
           user.rowaction === "Normal" ? "update" : user.rowaction;
         return {
           ...user,
-          
+
           item_code: itemCode,
           item_Name: item_Name,
           packing: formDataDetail.packing,
@@ -1199,7 +1417,7 @@ const SugarSaleReturnPurchase = () => {
     if (isEditMode && user.rowaction === "add") {
       setDeleteMode(true);
       setSelectedUser(user);
-      console.log("selectedUser",selectedUser)
+      console.log("selectedUser", selectedUser);
       updatedUsers = users.map((u) =>
         u.id === user.id ? { ...u, rowaction: "DNU" } : u
       );
@@ -1212,7 +1430,7 @@ const SugarSaleReturnPurchase = () => {
     } else {
       setDeleteMode(true);
       setSelectedUser(user);
-      console.log("selectedUser",selectedUser)
+      console.log("selectedUser", selectedUser);
       updatedUsers = users.map((u) =>
         u.id === user.id ? { ...u, rowaction: "DNU" } : u
       );
@@ -1331,14 +1549,14 @@ const SugarSaleReturnPurchase = () => {
     });
     setItemCode("");
     setItemName("");
-    
   };
 
   const editUser = (user) => {
     setSelectedUser(user);
+    console.log("selectedUser", selectedUser);
     setItemCode(user.item_code);
     setItemName(user.item_Name);
-    
+
     setFormDataDetail({
       narration: user.narration || "",
       packing: user.packing || 0,
@@ -1350,14 +1568,11 @@ const SugarSaleReturnPurchase = () => {
     openPopup("edit");
   };
 
-  const handleItemCode = (code, accoid,hsn,name) => {
+  const handleItemCode = (code, accoid, hsn, name) => {
     setItemCode(code);
     setItemName(name);
     setItemCodeAccoid(accoid);
   };
-
-  
-
 
   //Head Section help Functions to manage the Ac_Code and accoid
   const handleBillFrom = async (code, accoid, name, mobileNo) => {
@@ -1399,20 +1614,21 @@ const SugarSaleReturnPurchase = () => {
         GstRate,
         updatedFormData,
         matchStatusResult,
-        gstRate 
+        gstRate
       );
       setFormData(updatedFormData);
     } catch (error) {
       console.error("Error in handleBillFrom:", error);
     }
   };
-  const handlePurchaseNo = (purchaseNo) => {
-    setPurchno(purchaseNo)
+  const handlePurchaseNo = (purchaseNo, type) => {
+    setPurchno(purchaseNo);
+    setType(type);
     setFormData({
-        ...formData,
-        PURCNO: purchaseNo
-        
-    })
+      ...formData,
+      PURCNO: purchaseNo,
+      Tran_Type: type,
+    });
   };
 
   const handleBillTo = (code, accoid) => {
@@ -1481,7 +1697,6 @@ const SugarSaleReturnPurchase = () => {
       setFormData(newFormData);
     } catch (error) {}
   };
- 
 
   const handleBroker = (code, accoid) => {
     setBroker(code);
@@ -1492,13 +1707,14 @@ const SugarSaleReturnPurchase = () => {
     });
   };
 
-  
   return (
     <>
       <ToastContainer />
-  
 
-      <form className="SugarSaleReturnPurchase-container" onSubmit={handleSubmit}>
+      <form
+        className="SugarSaleReturnPurchase-container"
+        onSubmit={handleSubmit}
+      >
         <h6 className="Heading">Sale Return</h6>
 
         <div>
@@ -1523,13 +1739,15 @@ const SugarSaleReturnPurchase = () => {
             handleFirstButtonClick={handleFirstButtonClick}
             handlePreviousButtonClick={handlePreviousButtonClick}
             handleNextButtonClick={handleNextButtonClick}
-            handleLastButtonClick={handleLastButtonClick}
+            handleLastButtonClick={handleCancel}
             highlightedButton={highlightedButton}
             isEditing={isEditing}
           />
         </div>
         <div className="SugarSaleReturnPurchase-row">
-          <label className="SugarSaleReturnPurchase-form-label">Change No:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Change No:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -1557,23 +1775,27 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
- 
-          <label htmlFor="PURCNO" className="SugarSaleReturnPurchase-form-label">
+
+          <label
+            htmlFor="PURCNO"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             Purchase No
           </label>
           <div className="SugarSaleReturnPurchase-col">
             <div className="SugarSaleReturnPurchase-form-group">
               <PuchNoFromReturnPurchaseHelp
                 onAcCodeClick={handlePurchaseNo}
-                purchaseNo={purchNo}
+                purchaseNo={purchaseNo}
                 name="PURCNO"
-                OnSaleBillHead = {saleBillHeadData}
-                OnSaleBillDetail = {saleBillDetailData}
+                OnSaleBillHead={saleBillHeadData}
+                OnSaleBillDetail={saleBillDetailData}
                 tabIndexHelp={2}
                 disabledFeild={!isEditing && addOneButtonEnabled}
+                Type={type}
               />
             </div>
-          </div>   
+          </div>
 
           <label className="SugarSaleReturnPurchase-form-label">Year</label>
           <div className="SugarSaleReturnPurchase-col-Text">
@@ -1584,7 +1806,7 @@ const SugarSaleReturnPurchase = () => {
                 className="SugarSaleReturnPurchase-form-control"
                 name="Year_Code"
                 autoComplete="off"
-                value={saleBillDataDetails.Year_Code}
+                value={formData.Year_Code}
                 onChange={handleChange}
                 disabled
               />
@@ -1610,7 +1832,10 @@ const SugarSaleReturnPurchase = () => {
         </div>
 
         <div className="SugarSaleReturnPurchase-row">
-          <label htmlFor="Ac_Code" className="SugarSaleReturnPurchase-form-label">
+          <label
+            htmlFor="Ac_Code"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             Bill From:
           </label>
           <div className="SugarSaleReturnPurchase-col">
@@ -1627,7 +1852,10 @@ const SugarSaleReturnPurchase = () => {
           </div>
         </div>
         <div className="SugarSaleReturnPurchase-row">
-          <label htmlFor="Bill_To" className="SugarSaleReturnPurchase-form-label">
+          <label
+            htmlFor="Bill_To"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             Bill To:
           </label>
           <div className="SugarSaleReturnPurchase-col">
@@ -1644,7 +1872,10 @@ const SugarSaleReturnPurchase = () => {
           </div>
         </div>
         <div className="SugarSaleReturnPurchase-row">
-          <label htmlFor="Unit_Code" className="SugarSaleReturnPurchase-form-label">
+          <label
+            htmlFor="Unit_Code"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             Ship To:
           </label>
           <div className="SugarSaleReturnPurchase-col">
@@ -1661,7 +1892,10 @@ const SugarSaleReturnPurchase = () => {
           </div>
         </div>
         <div className="SugarSaleReturnPurchase-row">
-          <label htmlFor="mill_code" className="SugarSaleReturnPurchase-form-label">
+          <label
+            htmlFor="mill_code"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             Mill:
           </label>
           <div className="SugarSaleReturnPurchase-col">
@@ -1704,7 +1938,9 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-          <label className="SugarSaleReturnPurchase-form-label">Lorry No:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Lorry No:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -1718,7 +1954,9 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-          <label className="SugarSaleReturnPurchase-form-label">WareHouse:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            WareHouse:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -1733,7 +1971,10 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-          <label htmlFor="BROKER" className="SugarSaleReturnPurchase-form-label">
+          <label
+            htmlFor="BROKER"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             Broker:
           </label>
           <div className="SugarSaleReturnPurchase-col">
@@ -1748,7 +1989,10 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-          <label htmlFor="GstRateCode" className="SugarSaleReturnPurchase-form-label">
+          <label
+            htmlFor="GstRateCode"
+            className="SugarSaleReturnPurchase-form-label"
+          >
             GST Rate Code:
           </label>
           <div className="SugarSaleReturnPurchase-col">
@@ -1763,8 +2007,6 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-
-          
         </div>
 
         {isLoading && (
@@ -1813,8 +2055,9 @@ const SugarSaleReturnPurchase = () => {
                         />
                       </div>
 
-
-                      <label className="SugarSaleReturnPurchase-form-label">Quantal:</label>
+                      <label className="SugarSaleReturnPurchase-form-label">
+                        Quantal:
+                      </label>
                       <div className="SugarSaleReturnPurchase-col-Ewaybillno">
                         <div className="SugarSaleReturnPurchase-form-group">
                           <input
@@ -1828,7 +2071,9 @@ const SugarSaleReturnPurchase = () => {
                           />
                         </div>
                       </div>
-                      <label className="SugarSaleReturnPurchase-form-label">Packing:</label>
+                      <label className="SugarSaleReturnPurchase-form-label">
+                        Packing:
+                      </label>
                       <div className="SugarSaleReturnPurchase-col-Ewaybillno">
                         <div className="SugarSaleReturnPurchase-form-group">
                           <input
@@ -1842,7 +2087,9 @@ const SugarSaleReturnPurchase = () => {
                           />
                         </div>
                       </div>
-                      <label className="SugarSaleReturnPurchase-form-label">Bags:</label>
+                      <label className="SugarSaleReturnPurchase-form-label">
+                        Bags:
+                      </label>
                       <div className="SugarSaleReturnPurchase-col-Ewaybillno">
                         <div className="SugarSaleReturnPurchase-form-group">
                           <input
@@ -1856,7 +2103,9 @@ const SugarSaleReturnPurchase = () => {
                           />
                         </div>
                       </div>
-                      <label className="SugarSaleReturnPurchase-form-label">Rate:</label>
+                      <label className="SugarSaleReturnPurchase-form-label">
+                        Rate:
+                      </label>
                       <div className="SugarSaleReturnPurchase-col-Ewaybillno">
                         <div className="SugarSaleReturnPurchase-form-group">
                           <input
@@ -1886,7 +2135,9 @@ const SugarSaleReturnPurchase = () => {
                           />
                         </div>
                       </div>
-                      <label className="SugarSaleReturnPurchase-form-label">Narration:</label>
+                      <label className="SugarSaleReturnPurchase-form-label">
+                        Narration:
+                      </label>
                       <div className="SugarSaleReturnPurchase-col-Ewaybillno">
                         <div className="SugarSaleReturnPurchase-form-group">
                           <textarea
@@ -2034,7 +2285,7 @@ const SugarSaleReturnPurchase = () => {
                     {/* <td>{user.id}</td>
                   <td>{user.rowaction}</td> */}
                     <td>{user.item_code}</td>
-                    <td>{user.item_Name }</td>
+                    <td>{user.item_Name || user.itemname}</td>
                     <td>{user.Quantal}</td>
                     <td>{user.packing}</td>
                     <td>{user.bags}</td>
@@ -2049,19 +2300,26 @@ const SugarSaleReturnPurchase = () => {
         </div>
 
         <div className="SugarSaleReturnPurchase-row">
-          <label className="SugarSaleReturnPurchase-form-label">Net Quantal</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Net Quantal
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
                 tabIndex="9"
                 type="text"
-                className="SugarSaleReturnPurchase-form-control"
+                className={`SugarSaleReturnPurchase-form-control ${
+                  formErrors.NETQNTL ? "is-invalid" : ""
+                }`}
                 name="NETQNTL"
                 autoComplete="off"
                 value={formData.NETQNTL}
                 onChange={handleChange}
                 disabled={!isEditing && addOneButtonEnabled}
               />
+              {formErrors.NETQNTL && (
+                <div className="invalid-feedback">{formErrors.NETQNTL}</div>
+              )}
             </div>
           </div>
           <label className="SugarSaleReturnPurchase-form-label">Due Days</label>
@@ -2080,21 +2338,9 @@ const SugarSaleReturnPurchase = () => {
             </div>
           </div>
 
-    
-
-    
-
-          
-          
-          
-          
-
-          
-          
-          
-          
-          
-          <label className="SugarSaleReturnPurchase-form-label">EInvoice No:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            EInvoice No:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Ewaybillno">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2125,10 +2371,11 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-
         </div>
         <div className="SugarSaleReturnPurchase-row">
-          <label className="SugarSaleReturnPurchase-form-label">SubTotal:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            SubTotal:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2143,7 +2390,9 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-          <label className="SugarSaleReturnPurchase-form-label">Add Frt. Rs:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Add Frt. Rs:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2267,7 +2516,9 @@ const SugarSaleReturnPurchase = () => {
             </div>
           </div>
 
-          <label className="SugarSaleReturnPurchase-form-label">Rate Diff:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Rate Diff:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2309,7 +2560,9 @@ const SugarSaleReturnPurchase = () => {
               />
             </div>
           </div>
-          <label className="SugarSaleReturnPurchase-form-label">Cash Advance</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Cash Advance
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2325,7 +2578,9 @@ const SugarSaleReturnPurchase = () => {
             </div>
           </div>
 
-          <label className="SugarSaleReturnPurchase-form-label">Round Off</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Round Off
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2341,7 +2596,9 @@ const SugarSaleReturnPurchase = () => {
             </div>
           </div>
 
-          <label className="SugarSaleReturnPurchase-form-label">Bill Amount:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Bill Amount:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input
@@ -2384,7 +2641,9 @@ const SugarSaleReturnPurchase = () => {
             </div>
           </div>
 
-          <label className="SugarSaleReturnPurchase-form-label">Net Payable:</label>
+          <label className="SugarSaleReturnPurchase-form-label">
+            Net Payable:
+          </label>
           <div className="SugarSaleReturnPurchase-col-Text">
             <div className="SugarSaleReturnPurchase-form-group">
               <input

@@ -45,6 +45,8 @@ import EBuySugarianUserUtility from './EBuySugarian/EBuySugarinUser/EBuySugarian
 import EBuySugarAccountMasterUtility from './EBuySugarian/EBuySugarinUser/EBuySugarAccountMasterUtility';
 import DeliveryOredrUtility from './BusinessRelated/DeliveryOrder/DeliveryOrderUtility';
 import SugarSaleReturnPurchase from './Inword/SugarSaleReturnPurchase/SugarSaleReturnPurchase';
+import SugarSaleReturnPurchaseUtility from './Inword/SugarSaleReturnPurchase/SugarSaleReturnPurchaseUtility';
+import TenderPurchase from './BusinessRelated/TenderPurchase/TenderPurchase';
 
 const routes = [
   {
@@ -138,6 +140,11 @@ const routes = [
 {
   path: '/tender-purchaseutility',
   element: TenderPurchaseUtility 
+},
+{
+  path: '/tender_head',
+  element: TenderPurchase
+
 },
  //Debit Credit Note Routes
 {
@@ -248,6 +255,10 @@ const routes = [
 {
   path: '/sugar-sale-return-purchase',
   element: SugarSaleReturnPurchase
+},
+{
+  path: '/sugar-sale-return-purchase-utility',
+  element: SugarSaleReturnPurchaseUtility
 },
 
 

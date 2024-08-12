@@ -10,7 +10,7 @@ const CompanyCode = sessionStorage.getItem("Company_Code")
 const API_URL = process.env.REACT_APP_API;
 const Year_Code = sessionStorage.getItem("Year_Code");
 
-const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBillHead,OnSaleBillDetail,disabledFeild,tabIndexHelp}) => {
+const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBillHead,OnSaleBillDetail,disabledFeild,tabIndexHelp,Type}) => {
 
     const [showModal, setShowModal] = useState(false);
     const [popupContent, setPopupContent] = useState([]);
@@ -39,6 +39,13 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
     };
 
     useEffect(() => {
+        console.log("Received purchaseNo:", purchaseNo);
+        console.log("Received type:", Type);
+        setEnteredAcCode(purchaseNo);
+        setType(Type);
+    }, [purchaseNo, Type]);
+
+    useEffect(() => {
         const fetchData = async () => {
             try {
                 await fetchAndOpenPopup();
@@ -54,6 +61,8 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
         }
 
     }, [apiDataFetched]);
+
+
 
     // Handle Mill Code button click
     const handleMillCodeButtonClick = () => {
@@ -117,14 +126,14 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
     //After open popup onDoubleClick event that record display on the feilds
     const handleRecordDoubleClick = (item) => {
         if (lActiveInputFeild === name) {
-            setEnteredAcCode(item.doc_no);
+            setEnteredAcCode(item.PURCNO);
             setType(item.Tran_Type)
 
             fetchSaleBillData(item.doc_no);
            
 
             if (onAcCodeClick) {
-                onAcCodeClick(item.doc_no);
+                onAcCodeClick(item.doc_no,item.Tran_Type);
             }
         }
 
@@ -213,8 +222,8 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
                     >
                         ...
                     </Button>
-                    <label id="nameLabel" className="form-labels ms-2">
-                        {type}
+                    <label id="name" className="form-labels ms-2">
+                    {type !== '' ? type : Type}
                     </label>
                 </div>
             </div>

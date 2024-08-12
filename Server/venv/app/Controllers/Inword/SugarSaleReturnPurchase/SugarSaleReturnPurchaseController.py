@@ -1,3 +1,4 @@
+
 import traceback
 from flask import Flask, jsonify, request
 from app import app, db
@@ -14,19 +15,17 @@ API_URL = os.getenv('API_URL')
 
 # Global SQL Query for nt_1_sugarpurchasereturn
 PURCHASE_RETURN_QUERY = '''
-SELECT accode.Ac_Name_E AS partyname, mill.Ac_Name_E AS millname, unit.Ac_Name_E AS unitname, broker.Ac_Name_E AS brokername, item.System_Name_E AS itemname, billto.Ac_Name_E AS billtoname, 
-       dbo.nt_1_gstratemaster.GST_Name
-FROM dbo.nt_1_systemmaster AS item 
-RIGHT OUTER JOIN dbo.nt_1_sugarpurchasedetailsreturn ON item.systemid = dbo.nt_1_sugarpurchasedetailsreturn.ic 
-RIGHT OUTER JOIN dbo.nt_1_accountmaster AS accode 
-RIGHT OUTER JOIN dbo.nt_1_accountmaster AS mill 
-RIGHT OUTER JOIN dbo.nt_1_gstratemaster 
-RIGHT OUTER JOIN dbo.nt_1_sugarpurchasereturn ON dbo.nt_1_gstratemaster.gstid = dbo.nt_1_sugarpurchasereturn.gstid 
-LEFT OUTER JOIN dbo.nt_1_accountmaster AS billto ON dbo.nt_1_sugarpurchasereturn.bt = billto.accoid ON mill.accoid = dbo.nt_1_sugarpurchasereturn.mc 
-LEFT OUTER JOIN dbo.nt_1_accountmaster AS broker ON dbo.nt_1_sugarpurchasereturn.bc = broker.accoid 
-LEFT OUTER JOIN dbo.nt_1_accountmaster AS unit ON dbo.nt_1_sugarpurchasereturn.uc = unit.accoid 
-ON accode.accoid = dbo.nt_1_sugarpurchasereturn.ac 
-ON dbo.nt_1_sugarpurchasedetailsreturn.prid = dbo.nt_1_sugarpurchasereturn.prid
+SELECT        accode.Ac_Name_E AS partyname, mill.Ac_Name_E AS millname, unit.Ac_Name_E AS unitname, broker.Ac_Name_E AS brokername, item.System_Name_E AS itemname, billto.Ac_Name_E AS billtoname, 
+                         dbo.nt_1_gstratemaster.GST_Name, item.System_Code AS item_code
+FROM            dbo.nt_1_systemmaster AS item RIGHT OUTER JOIN
+                         dbo.nt_1_sugarpurchasedetailsreturn ON item.systemid = dbo.nt_1_sugarpurchasedetailsreturn.ic RIGHT OUTER JOIN
+                         dbo.nt_1_accountmaster AS accode RIGHT OUTER JOIN
+                         dbo.nt_1_accountmaster AS mill RIGHT OUTER JOIN
+                         dbo.nt_1_gstratemaster RIGHT OUTER JOIN
+                         dbo.nt_1_sugarpurchasereturn ON dbo.nt_1_gstratemaster.gstid = dbo.nt_1_sugarpurchasereturn.gstid LEFT OUTER JOIN
+                         dbo.nt_1_accountmaster AS billto ON dbo.nt_1_sugarpurchasereturn.bt = billto.accoid ON mill.accoid = dbo.nt_1_sugarpurchasereturn.mc LEFT OUTER JOIN
+                         dbo.nt_1_accountmaster AS broker ON dbo.nt_1_sugarpurchasereturn.bc = broker.accoid LEFT OUTER JOIN
+                         dbo.nt_1_accountmaster AS unit ON dbo.nt_1_sugarpurchasereturn.uc = unit.accoid ON accode.accoid = dbo.nt_1_sugarpurchasereturn.ac ON dbo.nt_1_sugarpurchasedetailsreturn.prid = dbo.nt_1_sugarpurchasereturn.prid
 WHERE item.System_Type = 'I' AND dbo.nt_1_sugarpurchasereturn.prid = :prid
 '''
 
@@ -192,7 +191,7 @@ def get_first_sugarpurchasereturn():
 
         response = {
             "last_head_data": last_head_data,
-            "label_labels_data": last_details_data,
+            "last_labels_data": last_details_data,
             "detail_data": detail_data
         }
 
@@ -233,7 +232,7 @@ def get_previous_sugarpurchasereturn():
 
         response = {
             "last_head_data": last_head_data,
-            "label_data": last_details_data,
+            "last_labels_data": last_details_data,
             "detail_data": detail_data
         }
 
