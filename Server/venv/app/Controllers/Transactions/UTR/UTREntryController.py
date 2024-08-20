@@ -7,16 +7,20 @@ from sqlalchemy import func
 from app.utils.CommonGLedgerFunctions import fetch_company_parameters, get_accoid
 import os
 import requests
+import traceback
+import logging
 
 # Get the base URL from environment variables
 API_URL = os.getenv('API_URL')
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Import schemas from the schemas module
 from app.models.Transactions.UTR.UTREntrySchema import UTRHeadSchema, UTRDetailSchema
 
 # Global SQL Query
 UTR_DETAILS_QUERY = '''
-    SELECT Bank.Ac_Name_E AS bankAcName, Mill.Ac_Name_E AS millName
+    SELECT Bank.Ac_Name_E AS bankAcName, Mill.Ac_Name_E AS millName,dbo.nt_1_utr.doc_no, dbo.nt_1_utr.utrid
     FROM dbo.nt_1_utr
     LEFT OUTER JOIN dbo.nt_1_accountmaster AS Mill ON dbo.nt_1_utr.mill_code = Mill.Ac_Code AND dbo.nt_1_utr.mc = Mill.accoid AND dbo.nt_1_utr.Company_Code = Mill.company_code
     LEFT OUTER JOIN dbo.nt_1_accountmaster AS Bank ON dbo.nt_1_utr.bank_ac = Bank.Ac_Code AND dbo.nt_1_utr.ba = Bank.accoid AND dbo.nt_1_utr.Company_Code = Bank.company_code
@@ -156,17 +160,18 @@ def insert_utr():
         head_data = data['head_data']
         detail_data = data['detail_data']
 
+        print('headata',head_data)
         max_doc_no = db.session.query(func.max(UTRHead.doc_no)).scalar() or 0
 
 
         # Increment the doc_no for the new entry
         new_doc_no = max_doc_no + 1
         head_data['doc_no'] = new_doc_no 
-
+        
         new_head = UTRHead(**head_data)
         db.session.add(new_head)
 
-
+        
         createdDetails = []
         updatedDetails = []
         deletedDetailIds = []
@@ -178,10 +183,11 @@ def insert_utr():
             if 'rowaction' in item:
                 if item['rowaction'] == "add":
                     del item['rowaction']
+                    
                     new_detail = UTRDetail(**item)
                     new_head.details.append(new_detail)
                     createdDetails.append(new_detail)
-
+                    
                 elif item['rowaction'] == "update":
                     utrdetailid = item['utrdetailid']
                     update_values = {k: v for k, v in item.items() if k not in ('utrdetailid', 'rowaction', 'utrid')}
@@ -200,7 +206,7 @@ def insert_utr():
             db.session.commit()
 
             amount = float(head_data.get('amount', 0) or 0)
-
+           
             bankAcCode = head_data.get('bank_ac')
             millCode = head_data.get('mill_code')
 
@@ -208,7 +214,7 @@ def insert_utr():
 
             gledger_entries = []
 
-
+            
             if amount>0:
                 
                 accoid = get_accoid(bankAcCode,head_data['Company_Code'])
@@ -246,6 +252,8 @@ def insert_utr():
         }), 201
 
     except Exception as e:
+        logger.error("Traceback: %s", traceback.format_exc())
+        logger.error("Error fetching data: %s", e)
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
@@ -287,10 +295,12 @@ def update_utr():
             entries.append(create_gledger_entry(data, amount, drcr, ac_code, accoid, drcrhead))
     try:
         utrid = request.args.get('utrid')
+        
         if not utrid:
             return jsonify({"error": "Missing 'utrid' parameter"}), 400
 
         data = request.get_json()
+       
         head_data = data['head_data']
         detail_data = data['detail_data']
 
@@ -298,10 +308,12 @@ def update_utr():
         updatedHeadCount=db.session.query(UTRHead).filter(UTRHead.utrid == utrid).update(head_data)
         updated_head = UTRHead.query.filter_by(utrid=utrid).first()
         updated_head_doc_no = updated_head.doc_no
-
+        print('detail_data',detail_data)
         created_details = []
         updated_details = []
         deleted_detail_ids = []
+
+        print('detail_data',detail_data)
 
         for item in detail_data:
             item['utrid'] = updated_head.utrid
@@ -309,6 +321,7 @@ def update_utr():
             if 'rowaction' in item:
                 if item['rowaction'] == "add":
                     del item['rowaction']
+                    # del item['utrdetailid']
                     item['doc_no'] = updated_head_doc_no
                     new_detail = UTRDetail(**item)
                     db.session.add(new_detail)
@@ -374,6 +387,8 @@ def update_utr():
         }), 200
 
     except Exception as e:
+        logger.error("Traceback: %s", traceback.format_exc())
+        logger.error("Error fetching data: %s", e)
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 

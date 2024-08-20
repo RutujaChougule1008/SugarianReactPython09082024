@@ -1,7 +1,7 @@
 from app import db
 
 class EBuyUsers(db.Model):
-    __tablename__ = 'tbl_users'
+    __tablename__ = 'eBuySugar_UserCreation'
 
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ac_code = db.Column(db.Integer, nullable=True)

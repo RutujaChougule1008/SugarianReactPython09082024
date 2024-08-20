@@ -315,6 +315,8 @@ const DebitCreditNote = () => {
       tran_type: tranType,
     };
 
+    console.log("HeadData",headData)
+
     // Remove dcid from headData if in edit mode
     if (isEditMode) {
       delete headData.dcid;

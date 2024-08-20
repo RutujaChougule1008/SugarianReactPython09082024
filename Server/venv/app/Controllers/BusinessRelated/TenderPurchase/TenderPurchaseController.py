@@ -1,7 +1,9 @@
 # project_folder/app/routes/tender_routes.py
-import datetime
+from datetime import datetime, timedelta, date
+import traceback
 from flask import Flask, jsonify, request
 from app import app, db
+from app.utils.CommonGLedgerFunctions import get_accoid
 from app.models.BusinessReleted.TenderPurchase.TenderPurchaseModels import TenderHead, TenderDetails 
 from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError 
@@ -9,6 +11,7 @@ import os
 API_URL = os.getenv('API_URL')
 # Import schemas from the schemas module
 from app.models.BusinessReleted.TenderPurchase.TenserPurchaseSchema import TenderHeadSchema, TenderDetailsSchema
+
 
 # Global SQL Query
 TASK_DETAILS_QUERY = '''
@@ -39,6 +42,14 @@ def format_dates(task):
         #  "Sauda_Date": task.Sauda_Date.strftime('%Y-%m-%d') if task.Sauda_Date else None,
         #  "payment_date": task.payment_date.strftime('%Y-%m-%d') if task.payment_date else None,
     }
+
+def format_dates_details(row):
+    if 'Sauda_Date' in row:
+        row['Sauda_Date'] = row['Sauda_Date'].strftime('%Y-%m-%d') if row['Sauda_Date'] else None
+    if 'payment_date' in row:
+        row['payment_date'] = row['payment_date'].strftime('%Y-%m-%d') if row['payment_date'] else None
+    # Add more date fields if necessary
+    return row
 
 # Define schemas
 tender_head_schema = TenderHeadSchema()
@@ -153,8 +164,10 @@ def insert_tender_head_detail():
             newTenderNo = maxTender_No + 1
             # Update Task_No in headData
             headData['Tender_No'] = newTenderNo
+            
 
             new_head = TenderHead(**headData)
+            new_head
             db.session.add(new_head)
 
             createdDetails = []
@@ -200,6 +213,7 @@ def insert_tender_head_detail():
             }), 201  # 201 Created
 
         except Exception as e:
+            print("Traceback",traceback.format_exc())
             db.session.rollback()
             print(e)
             return jsonify({"error": "Internal server error", "message": str(e)}), 500  
@@ -278,6 +292,7 @@ def update_tender_purchase():
             }), 200 
 
         except Exception as e:
+            print("Traceback",traceback.format_exc())
             db.session.rollback()
             return jsonify({"error": "Internal server error", "message": str(e)}), 500 
 
@@ -415,14 +430,22 @@ def get_last_record_navigation():
 
         # Extracting category name from additional_data
         additional_data_rows = [row._asdict() for row in additional_data.fetchall()]
+
+        formatted_additional_data_rows = [format_dates_details(row) for row in additional_data_rows]
+
+        print(additional_data_rows)
       
         # Prepare response data
         response = {
             "last_tender_head_data": {
                 **{column.name: getattr(last_task, column.name) for column in last_task.__table__.columns},
                 **format_dates(last_task),
+                
             },
-            "last_tender_details_data": additional_data_rows
+            "last_tender_details_data": 
+                formatted_additional_data_rows,
+        
+            
         }
 
         return jsonify(response), 200
@@ -608,9 +631,28 @@ def Stock_Entry_tender_purchase():
         })
 
     except Exception as e:
+        
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
     
+
+def get_millPayment_Date(company_code, year_code):
+    result = db.session.execute(
+        text("SELECT Mill_Payment_date FROM nt_1_companyparameters WHERE company_code = :company_code AND year_code = :year_code"),
+        {'company_code': company_code, 'year_code': year_code}
+    ).fetchone()
+    return result.Mill_Payment_date if result else None
+
+# Define a function to compute the new lifting date
+def compute_lifting_date(lifting_date_str, mill_payment_days):
+    try:
+        # Convert lifting_date from string to date object
+        lifting_date_obj = datetime.strptime(lifting_date_str, "%Y-%m-%d").date()
+        # Add mill_payment_days to lifting_date
+        new_lifting_date = lifting_date_obj + timedelta(days=mill_payment_days)
+        return new_lifting_date
+    except ValueError:
+        return None
 
 @app.route(API_URL + "/getNextTenderNo_SugarTenderPurchase", methods=["GET"])
 def getNextTenderNo_SugarTenderPurchase():
@@ -629,13 +671,53 @@ def getNextTenderNo_SugarTenderPurchase():
         else:
             next_doc_no = max_doc_no + 1  
 
+        # Fetch the Mill_Payment_date
+        mill_payment_days = get_millPayment_Date(Company_Code, Year_Code)
+
+        # Compute the new lifting date
+        lifting_date = compute_lifting_date(datetime.utcnow().date().isoformat(), mill_payment_days) if mill_payment_days else None
+
+
         response = {
-            "next_doc_no": next_doc_no
+            "next_doc_no": next_doc_no,
+            "lifting_date": lifting_date.isoformat() if lifting_date else None  # Return date in ISO format
         }
         return jsonify(response), 200
 
     except Exception as e:
         print(e)
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    
+@app.route(API_URL +"/get_SelfAc", methods=['GET'])
+def get_SelfAc():
+    # Parse query parameters
+    company_code = request.args.get('Company_Code')
+
+    if not company_code:
+        return jsonify({'error': 'Both Company_Code is required'}), 400
+
+    try:
+        company_code = int(company_code)
+        
+    except ValueError:
+        return jsonify({'error': 'Company_Code  must be integer'}), 400
+
+    query = text("select Ac_Name_E, Ac_Code, accoid from nt_1_accountmaster where Ac_Code = 2 and company_code = :company_code")
+    result = db.session.execute(query, {'company_code': company_code}).fetchone()
+
+    if result is None:
+        return jsonify({'error': 'No data found for the given Company_Code'}), 404
+
+    self_ac = result.Ac_Code
+    Self_acName = result.Ac_Name_E
+
+    accoid = get_accoid(self_ac,company_code)
+
+    return jsonify({
+        'SELF_AC': self_ac,
+        'Self_acid':accoid,
+        'Self_acName': Self_acName
+        }), 200
+
 
 

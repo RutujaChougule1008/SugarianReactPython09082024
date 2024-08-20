@@ -73,3 +73,6 @@ def get_acShort_Name(ac_code,company_code):
             {'ac_code': ac_code , 'company_code': company_code}
         ).fetchone()
         return result.Short_Name if result else None
+
+
+      

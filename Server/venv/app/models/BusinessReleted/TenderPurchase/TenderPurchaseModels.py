@@ -43,9 +43,19 @@ class TenderHead(db.Model):
     ic =  db.Column(db.Integer)
     gstratecode =  db.Column(db.Integer)
     CashDiff =  db.Column(db.DECIMAL)
-    TCS_Rate =  db.Column(db.DECIMAL)
+    TCS_Rate =  db.Column(db.Numeric)
     TCS_Amt =  db.Column(db.DECIMAL)
     commissionid =  db.Column(db.Integer)
+    Voucher_Type = db.Column(db.String(2))
+    Party_Bill_Rate = db.Column(db.DECIMAL)
+    TDS_Rate = db.Column(db.DECIMAL)
+    TDS_Amt = db.Column(db.DECIMAL)
+    Temptender = db.Column(db.String(1))
+    AutoPurchaseBill = db.Column(db.String(1))
+    Bp_Account = db.Column(db.Integer)
+    bp = db.Column(db.Integer)
+    groupTenderNo = db.Column(db.Integer)
+    groupTenderId = db.Column(db.Integer)
 
     details = db.relationship('TenderDetails', backref='head', lazy=True)
  
@@ -80,6 +90,10 @@ class TenderDetails(db.Model):
     ShipTo = db.Column(db.Integer)
     CashDiff = db.Column(db.DECIMAL)
     shiptoid = db.Column(db.Integer)
+    BP_Detail = db.Column(db.Integer)
+    bpid = db.Column(db.Integer)
+    loding_by_us = db.Column(db.String(1))
+    DetailBrokrage = db.Column(db.DECIMAL)
     
 
     
