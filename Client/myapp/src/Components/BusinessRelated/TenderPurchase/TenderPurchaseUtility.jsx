@@ -18,6 +18,10 @@ import SearchBar from "../../../Common/UtilityCommon/SearchBar";
 import PerPageSelect from "../../../Common/UtilityCommon/PerPageSelect";
 import axios from "axios";
 
+const API_URL = process.env.REACT_APP_API;
+const companyCode = sessionStorage.getItem("Company_Code");
+const Year_Code = sessionStorage.getItem("Year_Code");
+
 function TenderPurchaseUtility() {
   const [fetchedData, setFetchedData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -30,7 +34,7 @@ function TenderPurchaseUtility() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = 'http://localhost:8080/all_tender_data';
+        const apiUrl = `${API_URL}/all_tender_data?Company_Code=${companyCode}&Year_Code=${Year_Code}`;
         const response = await axios.get(apiUrl);
         setFetchedData(response.data);
       } catch (error) {
