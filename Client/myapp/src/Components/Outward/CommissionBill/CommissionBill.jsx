@@ -201,7 +201,7 @@ const CommissionBill = () => {
   const fetchGstStateCode = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/get-GSTStateCode?Company_Code=${companyCode}&Year_Code=${Year_Code}`
+        `http://localhost:5000/get-GSTStateCode?Company_Code=${companyCode}&Year_Code=${Year_Code}`
       );
       return response.data.GSTStateCode;
     } catch (error) {
@@ -717,7 +717,7 @@ const calculateAndSetGSTAmounts = async (formData) => {
   const fetchItemCode = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/sugarian/system_master_help?CompanyCode=${companyCode}&SystemType=I`
+        `http://localhost:5000/api/sugarian/system_master_help?CompanyCode=${companyCode}&SystemType=I`
       );
       const data = response.data;
       const item = data.find((item) => item.Category_Code === 1);
@@ -738,7 +738,7 @@ const calculateAndSetGSTAmounts = async (formData) => {
   const fetchBrokerCode = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/sugarian/account_master_all?Company_Code=${companyCode}`
+        `http://localhost:5000/api/sugarian/account_master_all?Company_Code=${companyCode}`
       );
       const data = response.data;
       const item = data.find((item) => item.Ac_Code === 2);
@@ -754,7 +754,7 @@ const calculateAndSetGSTAmounts = async (formData) => {
   const fetchGSTRateCode = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/sugarian/gst_rate_master?Company_Code=${companyCode}`
+        `http://localhost:5000/api/sugarian/gst_rate_master?Company_Code=${companyCode}`
       );
       const data = response.data;
       const item = data.find((item) => item.Doc_no === 1);

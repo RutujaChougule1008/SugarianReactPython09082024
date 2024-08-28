@@ -47,7 +47,7 @@ const CityMaster = () => {
 
     useEffect(() => {
         // Fetch data from the API endpoint when the component mounts
-        axios.get('http://localhost:8080/api/sugarian/getall-gststatemaster')
+        axios.get('http://localhost:5000/api/sugarian/getall-gststatemaster')
             .then(response => {
                 // Assuming the API response contains an array of states
                 setStates(response.data);

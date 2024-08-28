@@ -25,7 +25,7 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
     // Fetch data based on acType
     const fetchAndOpenPopup = async () => {
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/PurcNoFromReturnPurchase?Company_Code=${CompanyCode}&Year_Code=${Year_Code}`);
+            const response = await axios.get(`${API_URL}/PurcNoFromReturnPurchase?Company_Code=${CompanyCode}&Year_Code=${Year_Code}`);
             const data = response.data;
             const filteredData = data.filter(item => 
                 item.PartyName.toLowerCase().includes(searchTerm.toLowerCase())||
@@ -86,7 +86,7 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
 
         try {
             // Assuming `apiURL` is defined somewhere in your code
-            const response = await axios.get(`http://localhost:8080/api/sugarian/PurcNoFromReturnPurchase?Company_Code=${CompanyCode}&Year_Code=${Year_Code}`);
+            const response = await axios.get(`${API_URL}/PurcNoFromReturnPurchase?Company_Code=${CompanyCode}&Year_Code=${Year_Code}`);
             const data = response.data;
             setPopupContent(data);
             setApiDataFetched(true);
@@ -109,7 +109,7 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
     const fetchSaleBillData = async (purchaNo) => {
         try {
             
-            const response = await axios.get(`http://localhost:8080/api/sugarian/SaleBillByid?Company_Code=${CompanyCode}&Year_Code=${Year_Code}&doc_no=${purchaNo}`);
+            const response = await axios.get(`${API_URL}/SaleBillByid?Company_Code=${CompanyCode}&Year_Code=${Year_Code}&doc_no=${purchaNo}`);
             const saleBillHead = response.data.last_head_data;
             const saleBillDetail = response.data.last_details_data[0];
             OnSaleBillHead(saleBillHead)

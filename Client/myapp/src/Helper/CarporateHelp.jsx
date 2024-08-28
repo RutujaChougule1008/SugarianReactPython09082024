@@ -8,6 +8,7 @@ import "../App.css";
 const CompanyCode = sessionStorage.getItem("Company_Code");
 const YearCode = sessionStorage.getItem("Year_Code");
 var lActiveInputFeild = "";
+const API_URL = process.env.REACT_APP_API;
 
 const CarporateHelp = ({ onAcCodeClick, name, Carporate_no, tabIndexHelp, disabledFeild, onTenderDetailsFetched}) => {
     const [showModal, setShowModal] = useState(false);
@@ -23,7 +24,7 @@ const CarporateHelp = ({ onAcCodeClick, name, Carporate_no, tabIndexHelp, disabl
     const fetchData = useCallback(async () => {
         
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/carporateno?CompanyCode=${CompanyCode}`);
+            const response = await axios.get(`${API_URL}/carporateno?CompanyCode=${CompanyCode}`);
             const data = response.data;
             
             setPopupContent(data);
@@ -39,7 +40,7 @@ const CarporateHelp = ({ onAcCodeClick, name, Carporate_no, tabIndexHelp, disabl
     const fetchCarporateDetails = async (carporateNo) => {
         try {
             
-            const url = `http://localhost:8080/api/sugarian/getCarporateData?CompanyCode=${CompanyCode}&Carporate_no=${carporateNo}&Year_Code=${YearCode}`;
+            const url = `http://localhost:5000/api/sugarian/getCarporateData?CompanyCode=${CompanyCode}&Carporate_no=${carporateNo}&Year_Code=${YearCode}`;
             const response = await axios.get(url);
             const details = response.data;
             onTenderDetailsFetched(details)

@@ -47,6 +47,7 @@ import DeliveryOredrUtility from './BusinessRelated/DeliveryOrder/DeliveryOrderU
 import SugarSaleReturnPurchase from './Inword/SugarSaleReturnPurchase/SugarSaleReturnPurchase';
 import SugarSaleReturnPurchaseUtility from './Inword/SugarSaleReturnPurchase/SugarSaleReturnPurchaseUtility';
 import TenderPurchase from './BusinessRelated/TenderPurchase/TenderPurchase';
+import PendingDOUtility from './BusinessRelated/DeliveryOrder/PendingDOUtility'
 
 const routes = [
   {
@@ -127,6 +128,10 @@ const routes = [
 {
   path: '/delivery-order',
   element: DeliveryOrder
+},
+{
+  path: '/pending-do',
+  element: PendingDOUtility
 },
 {
   path: '/syetem-masterutility',

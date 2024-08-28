@@ -36,7 +36,7 @@ function OtherPurchaseUtility() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const apiUrl = `http://localhost:8080/api/sugarian/getall-OtherPurchase?Company_Code=${companyCode}&Year_Code=${Year_Code}`;
+                const apiUrl = `http://localhost:5000/api/sugarian/getall-OtherPurchase?Company_Code=${companyCode}&Year_Code=${Year_Code}`;
                 const response = await axios.get(apiUrl);
                 setFetchedData(response.data.all_other_purchase_data);
                 console.log(response.data)

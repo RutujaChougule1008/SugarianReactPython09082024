@@ -341,7 +341,7 @@ def insert_SaleBill():
             'TRAN_TYPE': "SB"
         }
 
-        response = requests.post("http://localhost:8080/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
+        response = requests.post("http://localhost:5000/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
 
         if response.status_code == 201:
             db.session.commit()
@@ -522,8 +522,6 @@ def update_SaleBill():
         str(headData['LESS_FRT_RATE'])  +
         ' Shiptoname: '+ get_acShort_Name(headData['Unit_Code'], headData['Company_Code']) )
 
-
-      
         ordercode=0
         if CGSTAmount > 0:
               ordercode=ordercode+1
@@ -544,11 +542,9 @@ def update_SaleBill():
               accoid = get_accoid(ac_code,headData['Company_Code'])
               add_gledger_entry(gledger_entries, headData, IGSTAmount, 'C', ac_code, accoid,creditnarration,ordercode)
 
-       
-       
         if TCS_Amt > 0:
             ordercode=ordercode+1
-            ac_code = headData['ac_code']
+            ac_code = headData['Ac_Code']
             accoid = get_accoid(ac_code,headData['Company_Code'])
             add_gledger_entry(gledger_entries, headData, TCS_Amt, 'D', ac_code, accoid,creditnarration,ordercode)
 
@@ -559,7 +555,7 @@ def update_SaleBill():
 
         if TDS_Amt > 0:
             ordercode=ordercode+1
-            ac_code = headData['ac_code']
+            ac_code = headData['Ac_Code']
             accoid = get_accoid(ac_code,headData['Company_Code'])
             add_gledger_entry(gledger_entries, headData, TDS_Amt, 'C', ac_code, accoid,creditnarration,ordercode)
 
@@ -600,10 +596,6 @@ def update_SaleBill():
              accoid = get_accoid(company_parameters.RoundOff)
              add_gledger_entry(gledger_entries, headData, Bill_Amount, 'D', ac_code, accoid,creditnarration,ordercode)
 
-
-    
-       
-       
         query_params = {
             'Company_Code': headData['Company_Code'],
             'DOC_NO': updateddoc_no,
@@ -611,7 +603,7 @@ def update_SaleBill():
             'TRAN_TYPE': "SB",
         }
 
-        response = requests.post("http://localhost:8080/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
+        response = requests.post("http://localhost:5000/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
 
         if response.status_code == 201:
             db.session.commit()
@@ -628,9 +620,9 @@ def update_SaleBill():
         }), 201
 
     except Exception as e:
-        print('Traceback',traceback.format_exc())
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
 
 
 
@@ -666,7 +658,7 @@ def delete_data_by_saleid():
             }
 
             # Make the external request
-            response = requests.delete("http://localhost:8080/api/sugarian/delete-Record-gLedger", params=query_params)
+            response = requests.delete("http://localhost:5000/api/sugarian/delete-Record-gLedger", params=query_params)
             
             if response.status_code != 200:
                 raise Exception("Failed to create record in gLedger")

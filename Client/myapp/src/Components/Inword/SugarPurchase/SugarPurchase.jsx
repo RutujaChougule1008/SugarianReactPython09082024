@@ -147,7 +147,7 @@ const SugarPurchase = () => {
         NETQNTL: 0.00,
         Company_Code: companyCode,
         Year_Code: Year_Code,
-        Branch_Code: "",
+        Branch_Code: 0,
         Created_By: "",
         Modified_By: "",
         Bill_No: "",
@@ -1237,7 +1237,7 @@ const SugarPurchase = () => {
 
         if (from != "" || FromCode != "") {
             // Make an API call to fetch match status
-            const response = await axios.get(`http://localhost:8080/api/sugarian/get_match_status`, {
+            const response = await axios.get(`http://localhost:5000/api/sugarian/get_match_status`, {
                 params: {
                     Company_Code: companyCode,
                     Year_Code: Year_Code,

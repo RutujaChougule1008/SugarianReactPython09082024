@@ -7,6 +7,7 @@ import "../App.css";
 
 var lActiveInputFeild = "";
 const CompanyCode = sessionStorage.getItem("Company_Code")
+const API_URL = process.env.REACT_APP_API;
 
 const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabledFeild,tabIndexHelp}) => {
 
@@ -24,7 +25,7 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
     // Fetch data based on acType
     const fetchAndOpenPopup = async () => {
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/gst_rate_master?Company_Code=${CompanyCode}`);
+            const response = await axios.get(`${API_URL}/gst_rate_master?Company_Code=${CompanyCode}`);
             const data = response.data;
             const filteredData = data.filter(item => 
                 item.GST_Name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -75,7 +76,7 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
 
         try {
             // Assuming `apiURL` is defined somewhere in your code
-            const response = await axios.get(`http://localhost:8080/api/sugarian/gst_rate_master?Company_Code=${CompanyCode}`);
+            const response = await axios.get(`${API_URL}/gst_rate_master?Company_Code=${CompanyCode}`);
             const data = response.data;
             setPopupContent(data);
             setApiDataFetched(true);

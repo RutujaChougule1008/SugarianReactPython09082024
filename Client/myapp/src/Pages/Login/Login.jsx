@@ -11,6 +11,7 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const UsernameRef = useRef(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const API_URL = process.env.REACT_APP_API;
 
   const [loginData, setLoginData] = useState({
     Login_Name: '',
@@ -32,7 +33,7 @@ const LoginForm = () => {
       return;
     }
     try {
-      const response = await axios.post('http://localhost:8080/api/login', loginData);
+      const response = await axios.post(`${API_URL}/login`, loginData);
       const { user_data, access_token } = response.data;
       sessionStorage.setItem('user_type', user_data.UserType);
       sessionStorage.setItem('access_token', access_token);
@@ -52,7 +53,6 @@ const LoginForm = () => {
     }
   };
 
-  // Focus the username input when the component mounts
   useEffect(() => {
     UsernameRef.current.focus();
   }, []);
@@ -60,8 +60,6 @@ const LoginForm = () => {
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
-
-
 
   return (
     <div className="login-container">
@@ -80,7 +78,7 @@ const LoginForm = () => {
             name="Login_Name"
             value={loginData.Login_Name}
             onChange={handleChange}
-     
+
             ref={UsernameRef}
           />
         </div>
@@ -97,7 +95,7 @@ const LoginForm = () => {
               name="Password"
               value={loginData.Password}
               onChange={handleChange}
-         
+
             />
             {passwordVisible ? (
               <AiFillEyeInvisible className="icon eye-icon" onClick={togglePasswordVisibility} />

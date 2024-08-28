@@ -48,7 +48,7 @@ function OtherGSTInputUtility() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = `http://localhost:8080/getall-OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`;
+        const apiUrl = `http://localhost:5000/getall-OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`;
         const response = await axios.get(apiUrl);
         setFetchedData(response.data);
       } catch (error) {

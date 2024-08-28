@@ -2,9 +2,11 @@ from flask import jsonify, request
 from flask_jwt_extended import create_access_token
 from app import app
 from app.models.LoginModels.LoginModels import GroupUser 
+import os
+API_URL = os.getenv('API_URL')
 
 # API route for user login
-@app.route('/api/login', methods=['POST'])
+@app.route(API_URL+"/login", methods=['POST'])
 def login():
     # Get login credentials from request
     login_data = request.json

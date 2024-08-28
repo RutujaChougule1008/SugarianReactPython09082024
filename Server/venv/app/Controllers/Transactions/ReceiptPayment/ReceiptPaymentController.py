@@ -247,7 +247,7 @@ def insert_receiptpayment():
             'TRAN_TYPE': headData['tran_type'],
         }
 
-        response = requests.post("http://localhost:8080/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
+        response = requests.post("http://localhost:5000/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
 
         if response.status_code == 201:
             db.session.commit()
@@ -375,7 +375,7 @@ def update_receiptpayment():
             'TRAN_TYPE': headData['tran_type'],
         }
 
-        response = requests.post("http://localhost:8080/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
+        response = requests.post("http://localhost:5000/api/sugarian/create-Record-gLedger", params=query_params, json=gledger_entries)
 
         if response.status_code == 201:
             db.session.commit()
@@ -422,7 +422,7 @@ def delete_data_by_tranid():
             }
 
             # Make the external request
-            response = requests.delete("http://localhost:8080/api/sugarian/delete-Record-gLedger", params=query_params)
+            response = requests.delete("http://localhost:5000/api/sugarian/delete-Record-gLedger", params=query_params)
             
             if response.status_code != 200:
                 raise Exception("Failed to create record in gLedger")    

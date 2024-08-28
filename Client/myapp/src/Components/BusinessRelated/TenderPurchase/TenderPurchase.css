@@ -209,3 +209,76 @@ textarea {
     margin-left: 0.5rem; /* Space between input and feedback */
     white-space: nowrap; /* Prevent wrapping */
 }
+
+
+.custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+  }
+  
+  .custom-modal-dialog {
+    width: 80%;
+    max-width: 1000px;
+  }
+  
+  .custom-modal-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  }
+  
+  .custom-modal-header,
+  .custom-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .custom-modal-title {
+    margin: 0;
+  }
+  
+  .close-btn {
+    font-size: 1.5rem;
+  }
+  
+  .custom-modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 15px;
+  }
+  
+  .form-row label {
+    width: 100px;
+  }
+  
+  .form-row .form-element,
+  .form-row input,
+  .form-row select,
+  .form-row textarea {
+    flex-grow: 1;
+  }
+  
+  .custom-modal-footer {
+    margin-top: 20px;
+  }
+  
+  .account-master-help {
+    width: 100%;
+  }
+  

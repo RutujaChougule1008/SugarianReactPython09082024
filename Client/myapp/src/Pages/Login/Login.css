@@ -43,8 +43,6 @@ h1 {
   box-sizing: border-box;
 }
 
-
-
 .btn-primary:hover {
   background-color: #0056b3;
 }
@@ -91,7 +89,6 @@ h1 {
   cursor: pointer;
   color: #888;
 }
-
 
 .loginButton {
   background-color: #08723d;

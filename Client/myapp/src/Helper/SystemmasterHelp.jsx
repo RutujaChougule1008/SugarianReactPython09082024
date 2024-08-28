@@ -7,6 +7,7 @@ import "../App.css";
 
 const CompanyCode = sessionStorage.getItem("Company_Code");
 var lActiveInputFeild = "";
+const API_URL = process.env.REACT_APP_API;
 
 const SystemHelpMaster = ({ onAcCodeClick, name, CategoryName, CategoryCode, tabIndexHelp, disabledField, SystemType }) => {
     const [showModal, setShowModal] = useState(false);
@@ -23,7 +24,7 @@ const SystemHelpMaster = ({ onAcCodeClick, name, CategoryName, CategoryCode, tab
 
     const fetchData = useCallback(async () => {
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/system_master_help?CompanyCode=${CompanyCode}&SystemType=${SystemType}`);
+            const response = await axios.get(`${API_URL}/system_master_help?CompanyCode=${CompanyCode}&SystemType=${SystemType}`);
             const data = response.data;
             setPopupContent(data);
             setApiDataFetched(true);

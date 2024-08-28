@@ -136,4 +136,68 @@ def getTenderNo_Data():
 
     except Exception as e:
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    
+@app.route(API_URL + "/getTenderNo_DataByTenderdetailId", methods=["GET"])
+def getTenderNo_DataByTenderdetailId():
+    try:
+       
+        tenderdetailid = request.args.get('tenderdetailid')
+
+        if not all([tenderdetailid]):
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        with db.session.begin_nested():
+            # Execute query2 first
+            query2 = db.session.execute(
+                text('''
+                    SELECT dbo.nt_1_companyparameters.SELF_AC, dbo.nt_1_accountmaster.accoid, dbo.nt_1_accountmaster.Ac_Name_E
+                    FROM dbo.nt_1_companyparameters
+                    INNER JOIN dbo.nt_1_accountmaster ON dbo.nt_1_companyparameters.Company_Code = dbo.nt_1_accountmaster.company_code 
+                      AND dbo.nt_1_companyparameters.SELF_AC = dbo.nt_1_accountmaster.Ac_Code
+                    
+                ''')
+                
+            )
+            SelfAc_data = [dict(row._mapping) for row in query2.fetchall()]
+            selfacname=SelfAc_data[0].get('Ac_Name_E', None)
+            selfac=SelfAc_data[0].get('SELF_AC', None)
+            selfacid=SelfAc_data[0].get('accoid', None)
+            
+            
+            # Now execute query1
+            query = db.session.execute(
+                text('''
+                    SELECT Buyer, buyername, Buyer_Party, buyerpartyname, Voucher_By, voucherbyname, Grade, 
+                           Buyer_Quantal AS Quantal, Packing, Bags, Excise_Rate, Mill_Rate, Sale_Rate, 
+                           Tender_DO, tenderdoname, Broker, brokername, Commission_Rate AS CR, 
+                           Delivery_Type AS DT, Payment_To, paymenttoname, gstratecode, gstratename, 
+                           itemcode, itemname, tenderdetailid, ShipToname, shiptoid, ShipTo, season, 
+                           Party_Bill_Rate, AutoPurchaseBill, buyerpartygststatecode, buyerpartystatename, 
+                           buyerpartyid, buyerid, shiptoid, pt, ic, td, gstrate,Tender_No,ID, mill_code, mc,millname,
+                           (case when Delivery_Type='DO' then Buyer else :selfac end) as Getpassno,
+                           (case when Delivery_Type='DO' then buyerid else :selfacid end) as Getpassnoid,
+                           (case when Delivery_Type='DO' then buyername else :selfacname end) as Getpassnoname  
+                     
+                    FROM qrytenderheaddetail
+                    WHERE  
+                       tenderdetailid = :tenderdetailid
+                '''),
+                 {'tenderdetailid': tenderdetailid,
+                   'selfac': selfac,'selfacname':selfacname,'selfacid':selfacid}
+      
+                
+            )
+
+            result = query.fetchall()
+            last_details_data = [dict(row._mapping) for row in result]
+
+            response = {
+                "last_details_data": last_details_data,
+               
+            }
+
+            return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 

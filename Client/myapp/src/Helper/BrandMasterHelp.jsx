@@ -6,6 +6,7 @@ import axios from "axios";
 import "../App.css";
 
 const CompanyCode = sessionStorage.getItem("Company_Code");
+const API_URL = process.env.REACT_APP_API;
 
 const BrandMasterHelp = ({ onAcCodeClick, name, brandName, brandCode, disabledField, tabIndexHelp }) => {
     const [showModal, setShowModal] = useState(false);
@@ -21,7 +22,7 @@ const BrandMasterHelp = ({ onAcCodeClick, name, brandName, brandCode, disabledFi
     // Fetch data for the brand master
     const fetchAndOpenPopup = async () => {
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/brand_master?Company_Code=${CompanyCode}`);
+            const response = await axios.get(`${API_URL}/brand_master?Company_Code=${CompanyCode}`);
             setPopupContent(response.data);
             setShowModal(true);
         } catch (error) {
@@ -65,7 +66,7 @@ const BrandMasterHelp = ({ onAcCodeClick, name, brandName, brandCode, disabledFi
         setEnteredAcCode(value);
         setEnteredAcName(""); // Reset brand name while data is being fetched
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/brand_master?Company_Code=${CompanyCode}`);
+            const response = await axios.get(`http://localhost:5000/api/sugarian/brand_master?Company_Code=${CompanyCode}`);
             setPopupContent(response.data);
             const matchingItem = response.data.find(item => item.brand_Code === parseInt(value, 10));
             if (matchingItem) {

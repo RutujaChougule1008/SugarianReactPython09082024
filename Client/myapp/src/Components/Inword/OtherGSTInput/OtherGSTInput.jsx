@@ -101,7 +101,7 @@ const OtherGSTInput = () => {
 
   const fetchLastRecord = () => {
     fetch(
-      `http://localhost:8080/get_last_OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
+      `http://localhost:5000/get_last_OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
     )
       .then((response) => {
         console.log("Response status:", response.status); // Check response status
@@ -172,7 +172,7 @@ const OtherGSTInput = () => {
     if (isEditMode) {
       axios
         .put(
-          `http://localhost:8080/update-OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`,
+          `http://localhost:5000/update-OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`,
           preparedData
         )
         .then((response) => {
@@ -196,7 +196,7 @@ const OtherGSTInput = () => {
     } else {
       axios
         .post(
-          `http://localhost:8080/create-OtherGSTInput?Company_Code=1&Year_Code=4`,
+          `http://localhost:5000/create-OtherGSTInput?Company_Code=1&Year_Code=4`,
           preparedData
         )
         .then((response) => {
@@ -232,7 +232,7 @@ const OtherGSTInput = () => {
   const handleCancel = () => {
     axios
       .get(
-        `http://localhost:8080/get_last_OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
+        `http://localhost:5000/get_last_OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
       )
       .then((response) => {
         const data = response.data;
@@ -278,7 +278,7 @@ const OtherGSTInput = () => {
       setCancelButtonEnabled(false);
 
       try {
-        const deleteApiUrl = `http://localhost:8080/delete-OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`;
+        const deleteApiUrl = `http://localhost:5000/delete-OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`;
         const response = await axios.delete(deleteApiUrl);
         // toast.success("Record deleted successfully!");
         handleCancel();
@@ -306,7 +306,7 @@ const OtherGSTInput = () => {
   const handlerecordDoubleClicked = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/get-OtherGSTInput-by-DocNo?Company_Code=${companyCode}&Doc_No=${selectedRecord.Doc_No}&Year_Code=4`
+        `http://localhost:5000/get-OtherGSTInput-by-DocNo?Company_Code=${companyCode}&Doc_No=${selectedRecord.Doc_No}&Year_Code=4`
       );
       const data = response.data;
       newExps_Ac = data.Exps_Ac;
@@ -362,7 +362,7 @@ const OtherGSTInput = () => {
   const handleFirstButtonClick = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/get-first-OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
+        `http://localhost:5000/get-first-OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
       );
       if (response.ok) {
         const data = await response.json();
@@ -392,7 +392,7 @@ const OtherGSTInput = () => {
     try {
       // Use formData.Company_Code as the current company code
       const response = await fetch(
-        `http://localhost:8080/get_previous_OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`
+        `http://localhost:5000/get_previous_OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`
       );
 
       if (response.ok) {
@@ -421,7 +421,7 @@ const OtherGSTInput = () => {
   const handleNextButtonClick = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/get_next_OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`
+        `http://localhost:5000/get_next_OtherGSTInput?Doc_No=${formData.Doc_No}&Company_Code=${companyCode}&Year_Code=4`
       );
 
       if (response.ok) {
@@ -450,7 +450,7 @@ const OtherGSTInput = () => {
   const handleLastButtonClick = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/get_last_OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
+        `http://localhost:5000/get_last_OtherGSTInput?Company_Code=${companyCode}&Year_Code=4`
       );
       if (response.ok) {
         const data = await response.json();

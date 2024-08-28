@@ -849,7 +849,7 @@ const SaleBill = () => {
   const fetchCompanyGSTCode = async (company_code) => {
     try {
       const { data } = await axios.get(
-        `http://localhost:8080/get_company_by_code?company_code=${company_code}`
+        `http://localhost:5000/get_company_by_code?company_code=${company_code}`
       );
       setGstNo(data.GST);
     } catch (error) {
