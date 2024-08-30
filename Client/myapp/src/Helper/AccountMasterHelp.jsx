@@ -4,23 +4,25 @@ import axios from "axios";
 import DataTable from "../Common/HelpCommon/DataTable";
 import DataTableSearch from "../Common/HelpCommon/DataTableSearch";
 import DataTablePagination from "../Common/HelpCommon/DataTablePagination";
-import "../App.css";
+
 
 const CompanyCode = sessionStorage.getItem("Company_Code");
 var lActiveInputFeild = "";
 
-const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tabIndexHelp,disabledFeild}) => {
+const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode, tabIndexHelp, disabledFeild }) => {
     const [showModal, setShowModal] = useState(false);
     const [popupContent, setPopupContent] = useState([]);
     const [enteredAcCode, setEnteredAcCode] = useState("");
     const [enteredAcName, setEnteredAcName] = useState("");
     const [enteredAccoid, setEnteredAccoid] = useState("");
     const [enteredMobNo, setEnteredMobNo] = useState("");
+    const [city, setCity] = useState("")
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
     const [selectedRowIndex, setSelectedRowIndex] = useState(-1);
     const [apiDataFetched, setApiDataFetched] = useState(false);
+
 
     const fetchData = useCallback(async () => {
         try {
@@ -63,10 +65,12 @@ const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tab
             setEnteredAcCode(matchingItem.Ac_Code);
             setEnteredAcName(matchingItem.Ac_Name_E);
             setEnteredAccoid(matchingItem.accoid);
-            setEnteredMobNo(matchingItem.Mobile_No)
+            setEnteredMobNo(matchingItem.Mobile_No);
+            setCity(matchingItem.cityname)
+            
 
             if (onAcCodeClick) {
-                onAcCodeClick(matchingItem.Ac_Code, matchingItem.accoid, matchingItem.Ac_Name_E,matchingItem.Mobile_No, matchingItem.Gst_No);
+                onAcCodeClick(matchingItem.Ac_Code, matchingItem.accoid, matchingItem.Ac_Name_E, matchingItem.Mobile_No, matchingItem.Gst_No,matchingItem.TDSApplicable);
             }
         } else {
             setEnteredAcName("");
@@ -79,8 +83,10 @@ const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tab
         setEnteredAcName(item.Ac_Name_E);
         setEnteredAccoid(item.accoid);
         setEnteredMobNo(item.Mobile_No);
+        setCity(item.cityname);
+        
         if (onAcCodeClick) {
-            onAcCodeClick(item.Ac_Code, item.accoid, item.Ac_Name_E, item.Mobile_No, item.Gst_No);
+            onAcCodeClick(item.Ac_Code, item.accoid, item.Ac_Name_E, item.Mobile_No, item.Gst_No,item.TDSApplicable);
         }
         setShowModal(false);
     };
@@ -106,6 +112,7 @@ const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tab
             if (event.key === "F1") {
                 if (event.target.id === name) {
                     lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
                     fetchAndOpenPopup();
                     event.preventDefault();
                 }
@@ -118,7 +125,8 @@ const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tab
             window.removeEventListener("keydown", handleKeyDown);
         };
     }, [name, fetchAndOpenPopup]);
-    
+
+    console.log("CategoryName:", CategoryName); 
 
     useEffect(() => {
         const handleKeyNavigation = (event) => {
@@ -170,7 +178,8 @@ const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tab
                         ...
                     </Button>
                     <label id="acNameLabel" className="form-labels ms-2">
-                        {enteredAcName || CategoryName}
+                    {`${enteredAcName || ''} ${city || ''} ${CategoryName || ''}`}
+
                     </label>
                 </div>
             </div>
@@ -184,12 +193,45 @@ const AccountMasterHelp = ({ onAcCodeClick, name, CategoryName, CategoryCode,tab
                 </Modal.Header>
                 <DataTableSearch data={popupContent} onSearch={handleSearch} />
                 <Modal.Body>
-                    <DataTable
-                        itemsToDisplay={itemsToDisplay}
-                        selectedRowIndex={selectedRowIndex}
-                        handleRecordDoubleClick={handleRecordDoubleClick}
-                        setSelectedRowIndex={setSelectedRowIndex}
-                    />
+                    <div style={{ overflowX: "auto" }}>
+                        <table
+                            style={{
+                                width: "100%",
+                                borderCollapse: "collapse",
+                                marginBottom: "1rem",
+                                backgroundColor: "#fff",
+                            }}
+                        >
+                            <thead>
+                                <tr style={{ backgroundColor: "#f8f9fa" }}>
+                                    <th style={{ border: "1px solid #dee2e6", padding: "8px" }}>Account Code</th>
+                                    <th style={{ border: "1px solid #dee2e6", padding: "8px" }}>Account Name</th>
+                                    <th style={{ border: "1px solid #dee2e6", padding: "8px" }}>City Name</th>
+                                    <th style={{ border: "1px solid #dee2e6", padding: "8px" }}>Mobile No</th>
+                                    <th style={{ border: "1px solid #dee2e6", padding: "8px" }}>GST No</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {itemsToDisplay.map((item, index) => (
+                                    <tr
+                                        key={item.accoid}
+                                        style={{
+                                            cursor: "pointer",
+                                            backgroundColor: selectedRowIndex === index ? "#d6e9f9" : "white",
+                                        }}
+                                        onClick={() => setSelectedRowIndex(index)}
+                                        onDoubleClick={() => handleRecordDoubleClick(item)}
+                                    >
+                                        <td style={{ border: "1px solid #dee2e6", padding: "8px" }}>{item.Ac_Code}</td>
+                                        <td style={{ border: "1px solid #dee2e6", padding: "8px" }}>{item.Ac_Name_E}</td>
+                                        <td style={{ border: "1px solid #dee2e6", padding: "8px" }}>{item.cityname}</td>
+                                        <td style={{ border: "1px solid #dee2e6", padding: "8px" }}>{item.Mobile_No}</td>
+                                        <td style={{ border: "1px solid #dee2e6", padding: "8px" }}>{item.Gst_No}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </Modal.Body>
                 <Modal.Footer>
                     <DataTablePagination

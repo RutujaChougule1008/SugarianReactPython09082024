@@ -1,12 +1,17 @@
 # app/routes/group_routes.py
 from flask import jsonify, request
-from app import app, db
+from app import app, db, socketio
 from app.models.Masters.OtherMasters.GstStateMaster import GSTStateMaster
 import os
 from sqlalchemy import text
+from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 
 # Get the base URL from environment variables
 API_URL = os.getenv('API_URL')
+
+app.config['SECRET_KEY'] = 'ABCDEFGHIJKLMNOPQRST'
+CORS(app, cors_allowed_origins="*")
 
 # Get all groups API
 @app.route(API_URL+"/getall-gststatemaster", methods=["GET"])
@@ -97,6 +102,8 @@ def create_gst_state_master():
         db.session.execute(query, {"state_code": state_code, "state_name": state_name})
         db.session.commit()
 
+        # socketio.emit('addState',query)
+
         return jsonify({'message': 'GST State Master record created successfully', 'State_Code': state_code}), 201
     except Exception as e:
         db.session.rollback()
@@ -150,6 +157,8 @@ def delete_gst_state_master():
         # Delete the record
         db.session.delete(gst_state_master)
         db.session.commit()
+
+        socketio.emit("deleteState", gst_state_master)
 
         return jsonify({'message': 'GST State Master record deleted successfully'}), 200
     except Exception as e:

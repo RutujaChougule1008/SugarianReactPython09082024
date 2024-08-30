@@ -133,6 +133,7 @@ const UTRLotnoHelp = ({ onAcCodeClick, name, Tenderno, tabIndexHelp, disabledFei
             if (event.key === "F1") {
                 if (event.target.id === name) {
                     lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
                     fetchAndOpenPopup();
                     event.preventDefault();
                 }

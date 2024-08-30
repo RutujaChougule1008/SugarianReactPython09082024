@@ -7,6 +7,7 @@ import "../App.css";
 
 const CompanyCode = sessionStorage.getItem("Company_Code");
 
+var lActiveInputFeild = "";
 const BrandMasterHelp = ({ onAcCodeClick, name, brandName, brandCode, disabledField, tabIndexHelp }) => {
     const [showModal, setShowModal] = useState(false);
     const [popupContent, setPopupContent] = useState([]);
@@ -109,32 +110,50 @@ const BrandMasterHelp = ({ onAcCodeClick, name, brandName, brandCode, disabledFi
     const endIndex = startIndex + itemsPerPage;
     const itemsToDisplay = filteredData.slice(startIndex, endIndex);
 
-    // Manage keyboard events
     useEffect(() => {
-        const handleKeyEvents = (event) => {
-            if (event.key === "F1" && event.target.id === name) {
-                fetchAndOpenPopup();
-                event.preventDefault();
-            } else if (event.key === "ArrowUp") {
-                event.preventDefault();
-                setSelectedRowIndex(prev => Math.max(prev - 1, 0));
-            } else if (event.key === "ArrowDown") {
-                event.preventDefault();
-                setSelectedRowIndex(prev => Math.min(prev + 1, itemsToDisplay.length - 1));
-            } else if (event.key === "Enter") {
-                event.preventDefault();
-                if (selectedRowIndex >= 0) {
-                    handleRecordDoubleClick(itemsToDisplay[selectedRowIndex]);
+        const handleKeyDown = (event) => {
+            if (event.key === "F1") {
+                if (event.target.id === name) {
+                    lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
+                    fetchAndOpenPopup();
+                    event.preventDefault();
                 }
-                setSelectedRowIndex(-1);
             }
         };
 
-        window.addEventListener("keydown", handleKeyEvents);
+        window.addEventListener("keydown", handleKeyDown);
+
         return () => {
-            window.removeEventListener("keydown", handleKeyEvents);
+            window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [selectedRowIndex, itemsToDisplay, name, fetchAndOpenPopup, handleRecordDoubleClick]);
+    }, [name, fetchAndOpenPopup]);
+
+    useEffect(() => {
+        const handleKeyNavigation = (event) => {
+            if (showModal) {
+                if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setSelectedRowIndex((prev) => Math.max(prev - 1, 0));
+                } else if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setSelectedRowIndex((prev) => Math.min(prev + 1, itemsToDisplay.length - 1));
+                } else if (event.key === "Enter") {
+                    event.preventDefault();
+                    if (selectedRowIndex >= 0) {
+                        handleRecordDoubleClick(itemsToDisplay[selectedRowIndex]);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyNavigation);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyNavigation);
+        };
+    }, [showModal, selectedRowIndex, itemsToDisplay, handleRecordDoubleClick]);
+
 
     return (
         <div className="d-flex flex-row ">
@@ -156,7 +175,7 @@ const BrandMasterHelp = ({ onAcCodeClick, name, brandName, brandCode, disabledFi
                     className="ms-1"
                     style={{ width: "30px", height: "35px" }}
                     disabled={disabledField}
-                    tabIndex={tabIndexHelp}
+                    
                 >
                     ...
                 </Button>

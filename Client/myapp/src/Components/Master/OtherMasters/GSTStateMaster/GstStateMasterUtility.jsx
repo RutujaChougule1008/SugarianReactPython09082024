@@ -20,8 +20,10 @@ import Pagination from "../../../../Common/UtilityCommon/Pagination";
 import SearchBar from "../../../../Common/UtilityCommon/SearchBar";
 import PerPageSelect from "../../../../Common/UtilityCommon/PerPageSelect";
 import axios from "axios";
+import { io } from "socket.io-client";
 
 const API_URL = process.env.REACT_APP_API;
+const socketUrl = process.env.REACT_APP_API_URL
 
 
 function GstStateMasterUtility() {
@@ -46,6 +48,34 @@ function GstStateMasterUtility() {
         };
 
         fetchData();
+    }, []);
+
+    useEffect(() => {
+        const socket = io(socketUrl);
+
+        socket.on('connect', () => {
+            console.log('Connected to socket server');
+        });
+
+        socket.on('addState', (newGroup) => {
+            setFetchedData((prevData) => [...prevData, newGroup]);
+            console.log('New group added:', newGroup);
+        });
+
+        socket.on('deleteState', (deletedGroup) => {
+            setFetchedData((prevData) =>
+                prevData.filter((group) => group.State_Code !== deletedGroup.State_Code)
+            );
+            console.log('Group deleted:', deletedGroup);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from socket server');
+        });
+
+        return () => {
+            socket.disconnect();
+        };
     }, []);
 
 

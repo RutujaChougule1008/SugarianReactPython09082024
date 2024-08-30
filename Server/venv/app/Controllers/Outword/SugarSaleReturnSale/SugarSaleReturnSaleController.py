@@ -82,6 +82,51 @@ def getdata_sugarsalereturn():
 
     except Exception as e:
         return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+    
+
+# Get data from both tables SaleBill and SaleBilllDetail
+@app.route(API_URL+"/getdata-SugarSaleReturnSale", methods=["GET"])
+def getdata_SugarSaleReturnSale():
+    try:
+        company_code = request.args.get('Company_Code')
+        year_code = request.args.get('Year_Code')
+
+        if not company_code or not year_code:
+            return jsonify({"error": "Missing 'Company_Code' or 'Year_Code' parameter"}), 400
+
+        query = ('''SELECT dbo.nt_1_sugarsalereturn.doc_no, dbo.nt_1_sugarsalereturn.doc_date, accode.Ac_Name_E, dbo.nt_1_sugarsalereturn.NETQNTL, dbo.nt_1_sugarsaledetailsreturn.item_Amount, dbo.nt_1_sugarsalereturn.srid, 
+                  dbo.nt_1_sugarsalereturn.ackno, dbo.nt_1_sugarsalereturn.Eway_Bill_No
+FROM     dbo.nt_1_accountmaster AS accode RIGHT OUTER JOIN
+                  dbo.nt_1_sugarsalereturn ON accode.accoid = dbo.nt_1_sugarsalereturn.ac LEFT OUTER JOIN
+                  dbo.nt_1_sugarsaledetailsreturn ON dbo.nt_1_sugarsalereturn.srid = dbo.nt_1_sugarsaledetailsreturn.srid
+                 where dbo.nt_1_sugarsalereturn.Company_Code = :company_code and dbo.nt_1_sugarsalereturn.Year_Code = :year_code
+                                 '''
+            )
+        additional_data = db.session.execute(text(query), {"company_code": company_code, "year_code": year_code})
+
+        # Extracting category name from additional_data
+        additional_data_rows = additional_data.fetchall()
+        
+        
+    
+
+        # Convert additional_data_rows to a list of dictionaries
+        all_data = [dict(row._mapping) for row in additional_data_rows]
+
+        for data in all_data:
+            if 'doc_date' in data:
+                data['doc_date'] = data['doc_date'].strftime('%Y-%m-%d') if data['doc_date'] else None
+
+        # Prepare response data 
+        response = {
+            "all_data": all_data
+        }
+        # If record found, return it
+        return jsonify(response), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 @app.route(API_URL + "/getsugarsalereturnByid", methods=["GET"])
 def getsugarsalereturnByid():
@@ -660,3 +705,32 @@ def delete_sugarsalereturn():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(e), "trace": traceback.format_exc()}), 500
+    
+
+@app.route(API_URL + "/getNextDocNo_SugarSaleReturnSale", methods=["GET"])
+def getNextDocNo_SugarSaleReturnSale():
+    try:
+        Company_Code = request.args.get('Company_Code')
+        Year_Code = request.args.get('Year_Code')
+
+        if not all([Company_Code, Year_Code]):
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        # Fetch the maximum document number for the given Company_Code and Year_Code
+        max_doc_no = db.session.query(func.max(SugarSaleReturnSaleHead.doc_no)).filter_by(Company_Code=Company_Code, Year_Code=Year_Code).scalar()
+
+        if max_doc_no is None:
+            next_doc_no = 1  
+        else:
+            next_doc_no = max_doc_no + 1  
+
+
+
+        response = {
+            "next_doc_no": next_doc_no,
+        }
+        return jsonify(response), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500

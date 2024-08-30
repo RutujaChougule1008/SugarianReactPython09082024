@@ -133,6 +133,7 @@ const PurcnoHelp = ({ onAcCodeClick, name, Tenderid, Tenderno, tabIndexHelp, dis
             if (event.key === "F1") {
                 if (event.target.id === name) {
                     lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
                     fetchAndOpenPopup();
                     event.preventDefault();
                 }

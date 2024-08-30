@@ -1,132 +1,93 @@
-import React, { useState, useEffect } from "react";
-import { Button, Modal } from "react-bootstrap";
+import React, { useState, useEffect, useCallback } from "react";
+import { Button, Modal, Table } from "react-bootstrap";
+import axios from "axios";
 import DataTableSearch from "../Common/HelpCommon/DataTableSearch";
 import DataTablePagination from "../Common/HelpCommon/DataTablePagination";
-import axios from "axios";
 import "../App.css";
 
+const CompanyCode = sessionStorage.getItem("Company_Code");
 var lActiveInputFeild = "";
-const CompanyCode = sessionStorage.getItem("Company_Code")
 
-const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabledFeild,tabIndexHelp}) => {
-
+const GradeMasterHelp = ({  name,onAcCodeClick, CategoryName,tabIndexHelp, disabledField}) => {
     const [showModal, setShowModal] = useState(false);
     const [popupContent, setPopupContent] = useState([]);
-    const [enteredAcCode, setEnteredAcCode] = useState("");
-    const [enteredAcName, setEnteredAcName] = useState("");
-    const [gstRate, setGstRate] = useState("");
+    // const [enteredCode, setEnteredCode] = useState("");
+    const [enteredName, setEnteredName] = useState("");
+    // const [enteredAccoid, setEnteredAccoid] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
     const [selectedRowIndex, setSelectedRowIndex] = useState(-1);
     const [apiDataFetched, setApiDataFetched] = useState(false);
 
-    // Fetch data based on acType
-    const fetchAndOpenPopup = async () => {
+    const fetchData = useCallback(async () => {
         try {
-            const response = await axios.get(`http://localhost:8080/api/sugarian/gst_rate_master?Company_Code=${CompanyCode}`);
+            const response = await axios.get(`http://localhost:8080/api/sugarian/system_master_help?CompanyCode=${CompanyCode}&SystemType=G`);
             const data = response.data;
-            const filteredData = data.filter(item => 
-                item.GST_Name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            setPopupContent(filteredData);
-            setShowModal(true);
+            setPopupContent(data);
+            setApiDataFetched(true);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
-    };
+    }, ["G"]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                await fetchAndOpenPopup();
-                setShowModal(false);
-                setApiDataFetched(true);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        };
-
+    const fetchAndOpenPopup = async () => {
         if (!apiDataFetched) {
-            fetchData();
+            await fetchData();
         }
-
-    }, [apiDataFetched]);
-
-    // Handle Mill Code button click
-    const handleMillCodeButtonClick = () => {
-        lActiveInputFeild = name;
-        fetchAndOpenPopup();
-        if (onAcCodeClick) {
-            onAcCodeClick({ enteredAcCode, enteredAcName });
-        }
+        setShowModal(true);
     };
 
-    //popup functionality show and hide
+    const handleButtonClicked = () => {
+        fetchAndOpenPopup();
+    };
+
     const handleCloseModal = () => {
         setShowModal(false);
     };
 
-    //handle onChange event for Mill Code,Broker Code and Bp Account
-    const handleAcCodeChange = async (event) => {
+    const handleCodeChange = async (event) => {
         const { value } = event.target;
-        setEnteredAcCode(value);
-        setEnteredAcName(""); // Reset Ac_Name while the data is being fetched
+        // setEnteredCode(value);
+        setEnteredName(value);
 
-        try {
-            // Assuming `apiURL` is defined somewhere in your code
-            const response = await axios.get(`http://localhost:8080/api/sugarian/gst_rate_master?Company_Code=${CompanyCode}`);
-            const data = response.data;
-            setPopupContent(data);
-            setApiDataFetched(true);
-
-            const matchingItem = data.find((item) => item.Doc_no === parseInt(value, 10));
-
-            if (matchingItem) {
-              
-                setGstRate(matchingItem.Rate);
-                setEnteredAcName(matchingItem.GST_Name);
-
-                if (onAcCodeClick) {
-                    onAcCodeClick(matchingItem.Doc_no, matchingItem.Rate,matchingItem.GST_Name, value);
-                }
-            } else {
-                setEnteredAcName("");
-                setGstRate("");
-            }
-        } catch (error) {
-            console.error("Error fetching data:", error);
+        if (!apiDataFetched) {
+            await fetchData();
         }
-    };
 
-    //After open popup onDoubleClick event that record display on the feilds
-    const handleRecordDoubleClick = (item) => {
-        if (lActiveInputFeild === name) {
-            setEnteredAcCode(item.Doc_no);
-            setGstRate(item.Rate);
-            setEnteredAcName(item.GST_Name);
+        const matchingItem = popupContent.find((item) => item.Category_Name === value);
+
+        if (matchingItem) {
+            setEnteredName(matchingItem.Category_Name);
+            
+            
 
             if (onAcCodeClick) {
-                onAcCodeClick(item.Doc_no,item.Rate, enteredAcName, enteredAcCode);
+                onAcCodeClick(matchingItem.Category_Name);
             }
-        }
+        } 
+    };
 
+    const handleRecordDoubleClick = (item) => {
+        setEnteredName(item.Category_Name);
+        
+        
+        if (onAcCodeClick) {
+            onAcCodeClick(item.Category_Name);
+        }
         setShowModal(false);
     };
 
-    //handle pagination number
     const handlePageChange = (newPage) => {
         setCurrentPage(newPage);
     };
 
-    //handle search functionality
     const handleSearch = (searchValue) => {
         setSearchTerm(searchValue);
     };
 
     const filteredData = popupContent.filter((item) =>
-        item.GST_Name && item.GST_Name.toLowerCase().includes(searchTerm.toLowerCase())
-
+        item.Category_Name && item.Category_Name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -177,40 +138,36 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
         };
     }, [showModal, selectedRowIndex, itemsToDisplay, handleRecordDoubleClick]);
 
-
     return (
-        <div className="d-flex flex-row ">
-            <div className="d-flex ">
+        <div className="d-flex flex-row">
+            <div className="d-flex">
                 <div className="d-flex">
                     <input
-                       
                         type="text"
                         className="form-control ms-2"
                         id={name}
                         autoComplete="off"
-                        value={enteredAcCode !== '' ? enteredAcCode : GstRateCode}
-                        onChange={handleAcCodeChange}
+                        value={enteredName !== '' ? enteredName : CategoryName}
+                        onChange={handleCodeChange}
                         style={{ width: "150px", height: "35px" }}
-                        disabled={disabledFeild}
                         tabIndex={tabIndexHelp}
-
+                        disabled={disabledField}
                     />
                     <Button
-                      
                         variant="primary"
-                        onClick={handleMillCodeButtonClick}
+                        onClick={handleButtonClicked}
                         className="ms-1"
                         style={{ width: "30px", height: "35px" }}
-                        disabled={disabledFeild}
-                       
+                        disabled={disabledField}
                     >
                         ...
                     </Button>
-                    <label id="acNameLabel" className=" form-labels ms-2">
-                        {enteredAcName || GstRateName}
-                    </label>
+                    {/* <label id="nameLabel" className="form-labels ms-2">
+                        {enteredName || CategoryName}
+                    </label> */}
                 </div>
             </div>
+            
             <Modal
                 show={showModal}
                 onHide={handleCloseModal}
@@ -226,10 +183,9 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
                             <table className="custom-table">
                                 <thead>
                                     <tr>
-                                        <th>Doc_no</th>
-                                        <th>GST_Name</th>
-                                        <th>Rate</th>
-
+                            
+                                        <th>Grade Name</th>
+                                        
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -241,10 +197,9 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
                                             }
                                             onDoubleClick={() => handleRecordDoubleClick(item)}
                                         >
-                                            <td>{item.Doc_no}</td>
-                                            <td>{item.GST_Name}</td>
-                                            <td>{item.Rate}</td>
-
+                                           
+                                            <td>{item.Category_Name}</td>
+                                            
                                         </tr>
                                     ))}
                                 </tbody>
@@ -254,7 +209,6 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
                         "Loading..."
                     )}
                 </Modal.Body>
-
                 <Modal.Footer>
                     <DataTablePagination
                         totalItems={filteredData.length}
@@ -270,4 +224,4 @@ const GSTRateMasterHelp = ({ onAcCodeClick, name, GstRateName,GstRateCode,disabl
     );
 };
 
-export default GSTRateMasterHelp;
+export default GradeMasterHelp;

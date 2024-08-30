@@ -17,6 +17,9 @@ import './AccountMaster.css'
  const companyCode = sessionStorage.getItem('Company_Code')
 const Year_Code = sessionStorage.getItem('Year_Code')
 const API_URL = process.env.REACT_APP_API;
+const GST_API = process.env.GST_PORTAL_API_URL;
+const GST_KEY = process.env.GST_PORTAL_API_KEY;
+const GST_SECRET_KEY = process.env.GST_PORTAL_API_SECRET_KEY;
 
 var cityName
 var newCity_Code
@@ -219,7 +222,7 @@ const handleGSTStateCode =(code) =>{
                   'Content-Type': 'application/json',
                   'MVApiKey': apiKey,
                   'MVSecretKey': apiSecret,
-                  'GSTIN': gstNo
+                  'GSTIN': '27AAECJ8332R1ZV'
               },
               body: JSON.stringify(requestBody)
           });

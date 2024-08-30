@@ -159,39 +159,49 @@ const PuchNoFromReturnPurchaseHelp = ({ onAcCodeClick, name, purchaseNo,OnSaleBi
     const endIndex = startIndex + itemsPerPage;
     const itemsToDisplay = filteredData.slice(startIndex, endIndex);
 
-    // Handle key events
     useEffect(() => {
-        const handleKeyEvents = async (event) => {
+        const handleKeyDown = (event) => {
             if (event.key === "F1") {
                 if (event.target.id === name) {
-                    lActiveInputFeild = name
+                    lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
                     fetchAndOpenPopup();
                     event.preventDefault();
                 }
-            } else if (event.key === "ArrowUp") {
-                event.preventDefault();
-                setSelectedRowIndex((prev) => Math.max(prev - 1, 0));
-            } else if (event.key === "ArrowDown") {
-                event.preventDefault();
-                setSelectedRowIndex((prev) =>
-                    Math.min(prev + 1, itemsToDisplay.length - 1)
-                );
-            } else if (event.key === "Enter") {
-                event.preventDefault();
-                // Check if a row is selected
-                if (selectedRowIndex >= 0) {
-                    handleRecordDoubleClick(itemsToDisplay[selectedRowIndex]);
-                }
-                setSelectedRowIndex(-1);
             }
         };
 
-        window.addEventListener("keydown", handleKeyEvents);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener("keydown", handleKeyEvents);
+            window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [selectedRowIndex, itemsToDisplay, name, fetchAndOpenPopup, handleRecordDoubleClick]);
+    }, [name, fetchAndOpenPopup]);
+
+    useEffect(() => {
+        const handleKeyNavigation = (event) => {
+            if (showModal) {
+                if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setSelectedRowIndex((prev) => Math.max(prev - 1, 0));
+                } else if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setSelectedRowIndex((prev) => Math.min(prev + 1, itemsToDisplay.length - 1));
+                } else if (event.key === "Enter") {
+                    event.preventDefault();
+                    if (selectedRowIndex >= 0) {
+                        handleRecordDoubleClick(itemsToDisplay[selectedRowIndex]);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyNavigation);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyNavigation);
+        };
+    }, [showModal, selectedRowIndex, itemsToDisplay, handleRecordDoubleClick]);
 
 
     return (

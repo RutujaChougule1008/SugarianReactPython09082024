@@ -106,6 +106,7 @@ const SystemHelpMaster = ({ onAcCodeClick, name, CategoryName, CategoryCode, tab
             if (event.key === "F1") {
                 if (event.target.id === name) {
                     lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
                     fetchAndOpenPopup();
                     event.preventDefault();
                 }

@@ -132,12 +132,12 @@ const CarporateHelp = ({ onAcCodeClick, name, Carporate_no, tabIndexHelp, disabl
             if (event.key === "F1") {
                 if (event.target.id === name) {
                     lActiveInputFeild = name;
+                    setSearchTerm(event.target.value);
                     fetchAndOpenPopup();
                     event.preventDefault();
                 }
             }
         };
-
         window.addEventListener("keydown", handleKeyDown);
 
         return () => {

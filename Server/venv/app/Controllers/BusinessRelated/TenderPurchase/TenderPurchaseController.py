@@ -2,7 +2,10 @@
 from datetime import datetime, timedelta, date
 import traceback
 from flask import Flask, jsonify, request
-from app import app, db
+from app import app, db, socketio
+from flask_socketio import SocketIO, emit
+from flask_cors import CORS
+import socketio
 from app.utils.CommonGLedgerFunctions import get_accoid
 from app.models.BusinessReleted.TenderPurchase.TenderPurchaseModels import TenderHead, TenderDetails 
 from sqlalchemy import func, text
@@ -12,13 +15,19 @@ API_URL = os.getenv('API_URL')
 # Import schemas from the schemas module
 from app.models.BusinessReleted.TenderPurchase.TenserPurchaseSchema import TenderHeadSchema, TenderDetailsSchema
 
+sio = socketio.Server()
+
+
+app.config['SECRET_KEY'] = 'ABCDEFGHIJKLMNOPQRST'
+CORS(app, cors_allowed_origins="*")
+
 
 # Global SQL Query
 TASK_DETAILS_QUERY = '''
   SELECT        Mill.Ac_Name_E AS MillName, dbo.nt_1_tender.Mill_Code, dbo.nt_1_tender.mc, dbo.nt_1_tender.ic, dbo.nt_1_tender.itemcode, dbo.qrymstitem.System_Name_E AS ItemName, dbo.nt_1_tender.Bp_Account, dbo.nt_1_tender.bp, 
                          BPAccount.Ac_Name_E AS BPAcName, dbo.nt_1_tender.Payment_To, dbo.nt_1_tender.pt, PaymentTo.Ac_Name_E AS PaymentToAcName, dbo.nt_1_tender.Tender_From, dbo.nt_1_tender.tf, 
                          TenderFrom.Ac_Name_E AS TenderFromAcName, dbo.nt_1_tender.Tender_DO, dbo.nt_1_tender.td, TenderDo.Ac_Name_E AS TenderDoAcName, dbo.nt_1_tender.Voucher_By, dbo.nt_1_tender.vb, 
-                         VoucherBy.Ac_Name_E AS VoucherByAcName, dbo.nt_1_tender.Broker, dbo.nt_1_tender.bk, Broker.Ac_Code AS BrokerAcName, dbo.nt_1_tender.gstratecode, dbo.nt_1_gstratemaster.GST_Name, 
+                         VoucherBy.Ac_Name_E AS VoucherByAcName, dbo.nt_1_tender.Broker, dbo.nt_1_tender.bk, Broker.Ac_Name_E AS BrokerAcName, dbo.nt_1_tender.gstratecode, dbo.nt_1_gstratemaster.GST_Name, 
                          dbo.nt_1_gstratemaster.Rate AS GSTRate, dbo.qrytenderdetail.*
 FROM            dbo.nt_1_tender LEFT OUTER JOIN
                          dbo.qrytenderdetail ON dbo.nt_1_tender.tenderid = dbo.qrytenderdetail.tenderid LEFT OUTER JOIN
@@ -128,23 +137,27 @@ def get_task_by_task_no():
     try:
         # Extract taskNo from request query parameters
         Tender_No = request.args.get('Tender_No')
+        yearCode = request.args.get('Year_Code')
+        companyCode = request.args.get('Company_Code')
         if not Tender_No:
             return jsonify({"error": "Task number not provided"}), 400
 
         # Use SQLAlchemy to find the record by Task_No
-        task_head = TenderHead.query.filter_by(Tender_No=Tender_No).first()
+        task_head = TenderHead.query.filter_by(Tender_No=Tender_No, Year_Code = yearCode,Company_Code=companyCode).first()
         newtenderid = task_head.tenderid
         additional_data = db.session.execute(text(TASK_DETAILS_QUERY), {"tenderid": newtenderid})
 
         # Fetching additional data and converting to a list of dictionaries
         additional_data_rows = [row._asdict() for row in additional_data.fetchall()]
+
+        formatted_additional_data_rows = [format_dates_details(row) for row in additional_data_rows]
    
         response = {
             "last_tender_head_data": {
                 **{column.name: getattr(task_head, column.name) for column in task_head.__table__.columns},
                   **format_dates(task_head), 
             },
-            "last_tender_details_data": additional_data_rows
+            "last_tender_details_data": formatted_additional_data_rows
         }
         # If record found, return it
         return jsonify(response), 200
@@ -176,6 +189,8 @@ def insert_tender_head_detail():
 
             max_detail_id = db.session.query(db.func.max(TenderDetails.ID)).filter_by(tenderid=newTenderNo).scalar() or 0
 
+            dispatchType = get_dispatch_type(headData['Company_Code'])
+
             for index, item in enumerate(detailData, start=1):
     
                if 'rowaction' in item:
@@ -189,6 +204,7 @@ def insert_tender_head_detail():
 
                     elif item['rowaction'] == "update":
                         tenderdetailid = item['tenderdetailid']
+                        print('tenderdetailid',tenderdetailid)
                         update_values = {k: v for k, v in item.items() if k not in ('tenderdetailid', 'tenderid')}
                         del update_values['rowaction']  # Remove 'rowaction' field
                         db.session.query(TenderDetails).filter(TenderDetails.tenderdetailid == tenderdetailid).update(update_values)
@@ -204,6 +220,18 @@ def insert_tender_head_detail():
 
             db.session.commit()
 
+            head_data = tender_head_schema.dump(new_head)
+            added_details = [tender_detail_schema.dump(detail) for detail in createdDetails]
+
+        # Emit the new tender head data and details to all connected clients
+            sio.emit('addTender', {
+            'head': head_data,
+            'addedDetails': added_details,
+            'updatedDetails': updatedDetails,
+            'deletedDetailIds': deletedDetailIds
+        })
+            
+
             return jsonify({
                 "message": "Data Inserted successfully",
                 "head": tender_head_schema.dump(new_head),
@@ -211,6 +239,8 @@ def insert_tender_head_detail():
                 "updatedDetails": updatedDetails,
                 "deletedDetailIds": deletedDetailIds
             }), 201  # 201 Created
+        
+            
 
         except Exception as e:
             print("Traceback",traceback.format_exc())
@@ -391,6 +421,8 @@ def get_first_record_navigation():
 
         # Fetching additional data and converting to a list of dictionaries
         additional_data_rows = [row._asdict() for row in additional_data.fetchall()]
+
+        formatted_additional_data_rows = [format_dates_details(row) for row in additional_data_rows]
        
         # Prepare response data
         response = {
@@ -398,7 +430,7 @@ def get_first_record_navigation():
                 **{column.name: getattr(first_task, column.name) for column in first_task.__table__.columns},
                 **format_dates(first_task), 
             },
-            "first_tender_details_data": additional_data_rows
+            "first_tender_details_data": formatted_additional_data_rows
         }
 
         return jsonify(response), 200
@@ -483,13 +515,17 @@ def get_previous_task_navigation():
         additional_data = db.session.execute(text(TASK_DETAILS_QUERY), {"tenderid": previous_task_id})
         # Fetch all rows from additional data
         additional_data_rows = [row._asdict() for row in additional_data.fetchall()]
+
+        formatted_additional_data_rows = [format_dates_details(row) for row in additional_data_rows]
+
+        
         # Prepare response data
         response = {
             "previous_tender_head_data": {
                 **{column.name: getattr(previous_task, column.name) for column in previous_task.__table__.columns},
                 **format_dates(previous_task), 
             },
-            "previous_tender_details_data":additional_data_rows
+            "previous_tender_details_data":formatted_additional_data_rows
         }
 
         return jsonify(response), 200
@@ -526,6 +562,8 @@ def get_next_task_navigation():
         
         # Fetch all rows from additional data
         additional_data_rows = [row._asdict() for row in additional_data.fetchall()]
+
+        formatted_additional_data_rows = [format_dates_details(row) for row in additional_data_rows]
         
         # Prepare response data
         response = {
@@ -533,7 +571,7 @@ def get_next_task_navigation():
                 **{column.name: getattr(next_task, column.name) for column in next_task.__table__.columns},
                 **format_dates(next_task)
             },
-            "next_tender_details_data": additional_data_rows
+            "next_tender_details_data": formatted_additional_data_rows
         }
         return jsonify(response), 200
     except Exception as e:
@@ -719,5 +757,12 @@ def get_SelfAc():
         'Self_acName': Self_acName
         }), 200
 
-
+@app.route(API_URL+"/get_dispatch_type/<company_code>", methods=['GET'])
+def get_dispatch_type(company_code):
+    result = db.session.execute(
+        text("SELECT dispatchType FROM nt_1_companyparameters WHERE company_code = :company_code"),
+        {'company_code': company_code}
+    ).fetchone()
+    dispatch_type = result.dispatchType if result else None
+    return jsonify({'dispatchType': dispatch_type})
 
